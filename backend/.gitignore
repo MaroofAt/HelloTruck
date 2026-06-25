@@ -1,0 +1,57 @@
+# ==========================================
+# Django Core
+# ==========================================
+*.log
+*.sqlite3
+/static/
+/staticfiles/
+/media/
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env.[a-zA-Z]*
+!.env.example
+
+# ==========================================
+# Python & Virtual Environments
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# ==========================================
+# Testing & Code Quality
+# ==========================================
+.htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# ==========================================
+# IDEs & Text Editors
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# ==========================================
+# Operating System Files
+# ==========================================
+.DS_Store
+Thumbs.db
