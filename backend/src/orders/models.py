@@ -2,8 +2,6 @@ from django.db import models
 
 from tools.models import TimeStampedModel
 
-from users.models import Trader, Vehicle
-
 # Create your models here.
 class Order(TimeStampedModel):
     volume = models.FloatField(null=False, blank=False)
@@ -39,7 +37,7 @@ class Order(TimeStampedModel):
         blank=False
     )
     trader = models.ForeignKey(
-        Trader,
+        'users.Trader',
         on_delete=models.CASCADE,
         related_name='orders',
         null=False,
@@ -131,7 +129,7 @@ class Order_Load(TimeStampedModel):
         blank=False
     )
     vehicle = models.ForeignKey(
-        Vehicle,
+        'users.Vehicle',
         on_delete=models.CASCADE,
         related_name='order_loads',
         null=False,

@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 
 from tools.models import TimeStampedModel
 
-from dashboard.models import Branch , Location
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
@@ -106,7 +105,7 @@ class Trader(TimeStampedModel):
     )
 
     def clean(self):
-        if self.credential.role != Credential.Role.TRADER:
+        if self.credentials.role != Credential.Role.TRADER:
             raise ValidationError(
                 "Credential must have Trader role."
             )
@@ -131,7 +130,7 @@ class Captain(TimeStampedModel):
             related_name='captain'
         )
     accommodation = models.ForeignKey(
-        Location,
+        'dashboard.Location',
         on_delete=models.CASCADE,
         related_name='captains',
         null=False,
@@ -140,7 +139,7 @@ class Captain(TimeStampedModel):
     permanent = models.BooleanField(null=False, blank=False)
 
     def clean(self):
-        if self.credential.role != Credential.Role.CAPTAIN:
+        if self.credentials.role != Credential.Role.CAPTAIN:
             raise ValidationError(
                 "Credential must have Captain role."
             )
@@ -165,7 +164,7 @@ class Sub_Admin(TimeStampedModel):
             related_name='sub_admin'
         )
     branch = models.ForeignKey(
-        Branch,
+        'dashboard.Branch',
         on_delete=models.CASCADE,
         related_name='sub_admins',
         null=False,
@@ -173,7 +172,7 @@ class Sub_Admin(TimeStampedModel):
     )
 
     def clean(self):
-        if self.credential.role != Credential.Role.SUB_ADMIN:
+        if self.credentials.role != Credential.Role.SUB_ADMIN:
             raise ValidationError(
                 "Credential must have SubAdmin role."
             )
