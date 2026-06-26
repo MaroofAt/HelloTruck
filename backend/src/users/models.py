@@ -56,10 +56,43 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
 
     objects = CustomUserManager()
 
-    class Meta:
-        db_table = 'credentials'
-    
+    def jwt_claims(self):
+        claims = {
+            'id': self.id,
+            'role': self.role,
+            'identifier': self.get_identifier(),
+        }
+        if(self.role == Credential.Role.TRADER):
+            claims['ecommerce'] = self.trader.ecommerce
+        elif(self.role == Credential.Role.CAPTAIN):
+            claims['accommodation_id'] = self.captain.accommodation_id
+            claims['permanent'] = self.captain.permanent
+        elif(self.role == Credential.Role.SUB_ADMIN):
+            claims['branch_id'] = self.sub_admin.branch.id
+        
+        return claims
 
+    def get_identifier(self):
+        if(self.role == Credential.Role.TRADER):
+            if not self.email and not self.mobile_number:
+                raise ValidationError("trader credentials doesn't have neither email nor mobile_number")
+            return self.email if self.email else self.mobile_number
+        elif(self.role == Credential.Role.CAPTAIN):
+            if not self.username and not self.mobile_number:
+                raise ValidationError("captain credentials doesn't have neither username nor mobile_number")
+            return self.username if self.username else self.mobile_number
+        elif(self.role == Credential.Role.SUB_ADMIN):
+            if not self.email:
+                raise ValidationError("Sub-Admin credentials doesn't have email")
+            return self.email
+        elif(self.role == Credential.Role.ADMIN):
+            if not self.email:
+                raise ValidationError("Admin credentials doesn't have email")
+            return self.email
+        else:
+            raise ValidationError("Invalid Role !!")
+
+    
     def validate_role_credential(self):
         validators = {
             Credential.Role.TRADER: (self.email or self.mobile_number),
@@ -84,6 +117,9 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+    
+    class Meta:
+        db_table = 'credentials'
 
 
 
