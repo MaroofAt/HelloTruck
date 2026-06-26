@@ -44,10 +44,10 @@ INSTALLED_APPS = [
     # installed
     'rest_framework',
     'dotenv',
-    'django_extensions',
+    # 'django_extensions',
 
     # own
-
+    'users'
 ]
 
 MIDDLEWARE = [
@@ -116,6 +116,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "users.Credential"
+
+AUTHENTICATION_BACKENDS = [
+    "tools.backends.EmailOrMobileBackend",
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
