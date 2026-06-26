@@ -47,7 +47,9 @@ INSTALLED_APPS = [
     # 'django_extensions',
 
     # own
-    'users'
+    'users',
+    'orders',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
