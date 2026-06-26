@@ -56,3 +56,8 @@ coverage.xml
 # ==========================================
 .DS_Store
 Thumbs.db
+
+
+# own
+src/*/migrations/*
+!src/*/migrations/__init__.py

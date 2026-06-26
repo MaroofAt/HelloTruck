@@ -8,7 +8,7 @@ from tools.models import TimeStampedModel
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self , role=Credential.Role.TRADER, username=None, email=None, mobile_number = None, password = None , **extra_fields):    
+    def create_user(self , role='trader', username=None, email=None, mobile_number = None, password = None , **extra_fields):    
         if email:
             email = self.normalize_email(email.strip())
         if username:
@@ -98,7 +98,7 @@ class Trader(TimeStampedModel):
 
 
     discounts = models.ManyToManyField(
-        Discount,
+        "Discount",
         through="Discount_Traders",
         through_fields=('trader', 'discount'),
         related_name='traders'
@@ -192,7 +192,7 @@ class Discount(TimeStampedModel):
         constraints=[
             models.CheckConstraint(
                 name='percent_must_be_between_0_and_100',
-                condition= models.Q(percent__isnull=True) | (models.Q(percent__lte=100) & models.Q(percent__lg=0))
+                condition= models.Q(percent__isnull=True) | (models.Q(percent__lte=100) & models.Q(percent__gt=0))
             ),
             models.CheckConstraint(
                 name='one_of_the_2_types_must_not_be_null',
