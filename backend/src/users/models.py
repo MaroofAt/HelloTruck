@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 
 from tools.models import TimeStampedModel
 
+from dashboard.models import Branch , Location
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
@@ -129,7 +130,13 @@ class Captain(TimeStampedModel):
             on_delete=models.CASCADE,
             related_name='captain'
         )
-    # TODO: add accomodation field (FK to location not str)
+    accommodation = models.ForeignKey(
+        Location,
+        on_delete=models.CASCADE,
+        related_name='captains',
+        null=False,
+        blank=False
+    )
     permanent = models.BooleanField(null=False, blank=False)
 
     def clean(self):
@@ -157,7 +164,13 @@ class Sub_Admin(TimeStampedModel):
             on_delete=models.CASCADE,
             related_name='sub_admin'
         )
-    #TODO: add branch FK
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.CASCADE,
+        related_name='sub_admins',
+        null=False,
+        blank=False
+    )
 
     def clean(self):
         if self.credential.role != Credential.Role.SUB_ADMIN:
