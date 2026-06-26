@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 
 from tools.models import TimeStampedModel
 
-from dashboard.models import Branch , Location
 # Create your models here.
 
 class CustomUserManager(BaseUserManager):
@@ -57,10 +56,43 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
 
     objects = CustomUserManager()
 
-    class Meta:
-        db_table = 'credentials'
-    
+    def jwt_claims(self):
+        claims = {
+            'id': self.id,
+            'role': self.role,
+            'identifier': self.get_identifier(),
+        }
+        if(self.role == Credential.Role.TRADER):
+            claims['ecommerce'] = self.trader.ecommerce
+        elif(self.role == Credential.Role.CAPTAIN):
+            claims['accommodation_id'] = self.captain.accommodation_id
+            claims['permanent'] = self.captain.permanent
+        elif(self.role == Credential.Role.SUB_ADMIN):
+            claims['branch_id'] = self.sub_admin.branch.id
+        
+        return claims
 
+    def get_identifier(self):
+        if(self.role == Credential.Role.TRADER):
+            if not self.email and not self.mobile_number:
+                raise ValidationError("trader credentials doesn't have neither email nor mobile_number")
+            return self.email if self.email else self.mobile_number
+        elif(self.role == Credential.Role.CAPTAIN):
+            if not self.username and not self.mobile_number:
+                raise ValidationError("captain credentials doesn't have neither username nor mobile_number")
+            return self.username if self.username else self.mobile_number
+        elif(self.role == Credential.Role.SUB_ADMIN):
+            if not self.email:
+                raise ValidationError("Sub-Admin credentials doesn't have email")
+            return self.email
+        elif(self.role == Credential.Role.ADMIN):
+            if not self.email:
+                raise ValidationError("Admin credentials doesn't have email")
+            return self.email
+        else:
+            raise ValidationError("Invalid Role !!")
+
+    
     def validate_role_credential(self):
         validators = {
             Credential.Role.TRADER: (self.email or self.mobile_number),
@@ -85,6 +117,9 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+    
+    class Meta:
+        db_table = 'credentials'
 
 
 
@@ -106,7 +141,7 @@ class Trader(TimeStampedModel):
     )
 
     def clean(self):
-        if self.credential.role != Credential.Role.TRADER:
+        if self.credentials.role != Credential.Role.TRADER:
             raise ValidationError(
                 "Credential must have Trader role."
             )
@@ -131,7 +166,7 @@ class Captain(TimeStampedModel):
             related_name='captain'
         )
     accommodation = models.ForeignKey(
-        Location,
+        'dashboard.Location',
         on_delete=models.CASCADE,
         related_name='captains',
         null=False,
@@ -140,7 +175,7 @@ class Captain(TimeStampedModel):
     permanent = models.BooleanField(null=False, blank=False)
 
     def clean(self):
-        if self.credential.role != Credential.Role.CAPTAIN:
+        if self.credentials.role != Credential.Role.CAPTAIN:
             raise ValidationError(
                 "Credential must have Captain role."
             )
@@ -165,7 +200,7 @@ class Sub_Admin(TimeStampedModel):
             related_name='sub_admin'
         )
     branch = models.ForeignKey(
-        Branch,
+        'dashboard.Branch',
         on_delete=models.CASCADE,
         related_name='sub_admins',
         null=False,
@@ -173,7 +208,7 @@ class Sub_Admin(TimeStampedModel):
     )
 
     def clean(self):
-        if self.credential.role != Credential.Role.SUB_ADMIN:
+        if self.credentials.role != Credential.Role.SUB_ADMIN:
             raise ValidationError(
                 "Credential must have SubAdmin role."
             )
