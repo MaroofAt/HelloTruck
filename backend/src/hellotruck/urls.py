@@ -23,11 +23,27 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
+from drf_spectacular.utils import extend_schema , extend_schema_view
+
 from tools.simplejwt import CustomTokenObtainPairView
 
 simplejwt_auth_patterns = [
-    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/',  extend_schema_view(
+        post=extend_schema(
+            tags=['Auth'],
+            summary="Token",
+            request={
+                'application/json':{
+                    'type':'object',
+                    'properties':{
+                        'role': {'type':'string', 'example':'trader'},
+                        'identifier':{'type':'string', 'example':'m@m.com'},
+                        'password':{'type':'string', 'example':'12345678'},
+                    }
+                }
+            }
+        ))(CustomTokenObtainPairView.as_view()), name='token_obtain_pair'),
+    path('token/refresh/', extend_schema_view(post=extend_schema(tags=['Auth'], summary="Refresh Token"))(TokenRefreshView.as_view()), name='token_refresh'),
 ]
 
 api_patterns = [

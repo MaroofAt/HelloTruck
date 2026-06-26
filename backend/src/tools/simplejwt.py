@@ -1,22 +1,40 @@
+from django.contrib.auth import authenticate
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework import serializers
 
 from users.models import Credential
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    role = serializers.ChoiceField(choices=Credential.Role.choices,required=True)
+    identifier = serializers.CharField(required=True)
+    password = serializers.CharField(write_only=True, required=True)
+
+    username_field = "identifier"
+
     def validate(self, attrs):
-        data = super().validate(attrs)
-        
-        # Add custom data to the response
-        credentials:Credential = self.user
+        credentials:Credential = authenticate(
+            request=self.context.get("request"),
+            role=attrs["role"],
+            identifier=attrs["identifier"],
+            password=attrs["password"],
+        )
+
+        if credentials is None:
+            raise serializers.ValidationError(
+                "Invalid credentials."
+            )
+
+        self.user = credentials
+        refresh = self.get_token(credentials)
+
+        data = {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }
 
         data.update(credentials.jwt_claims())
-        
-        # Add custom claims to the token itself (optional)
-        # refresh = self.get_token(self.user)
-        # refresh['custom_claim'] = 'custom_value'
-        # refresh['user_role'] = getattr(self.user, 'role', 'user')
-        
+
         return data
     
     @classmethod
