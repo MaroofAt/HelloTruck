@@ -92,7 +92,15 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
         else:
             raise ValidationError("Invalid Role !!")
 
-    
+    def is_trader(self):
+        return self.role == Credential.Role.TRADER
+    def is_captain(self):
+        return self.role == Credential.Role.CAPTAIN
+    def is_sub_admin(self):
+        return self.role == Credential.Role.SUB_ADMIN
+    def is_admin(self):
+        return self.role == Credential.Role.ADMIN
+
     def validate_role_credential(self):
         validators = {
             Credential.Role.TRADER: (self.email or self.mobile_number),
