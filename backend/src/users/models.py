@@ -3,7 +3,7 @@ from django.contrib.auth.models import BaseUserManager , AbstractBaseUser , Perm
 from django.core.exceptions import ValidationError
 
 
-from tools.models import TimeStampedModel
+from tools.models import TimeStampedModel, check_mobile_number, normalize_mobile_number
 
 # Create your models here.
 
@@ -21,8 +21,8 @@ class CustomUserManager(BaseUserManager):
             email = email,
             **extra_fields
         )
-        user.full_clean() # here it will call self.clean() and that one will call validate_role_credential()
         user.set_password(password) # hash the password
+        user.full_clean() # here it will call self.clean() and that one will call validate_role_credential()
         user.save(using=self._db)
         return user
 
@@ -60,8 +60,7 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
         claims = {
             'id': self.id,
             'role': self.role,
-            'identifier': self.get_identifier(),
-        }
+        }.update(self.get_identifier())
         if(self.role == Credential.Role.TRADER):
             claims['ecommerce'] = self.trader.ecommerce
         elif(self.role == Credential.Role.CAPTAIN):
@@ -72,23 +71,28 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
         
         return claims
 
-    def get_identifier(self):
+    def get_identifier(self) -> dict:
+        def make_dict(identifier, type):
+            return {
+                'identifier': identifier,
+                'identifier_type': type,
+            }
         if(self.role == Credential.Role.TRADER):
             if not self.email and not self.mobile_number:
                 raise ValidationError("trader credentials doesn't have neither email nor mobile_number")
-            return self.email if self.email else self.mobile_number
+            return make_dict(self.email,'email') if self.email else make_dict(self.mobile_number, 'mobile_number')
         elif(self.role == Credential.Role.CAPTAIN):
             if not self.username and not self.mobile_number:
                 raise ValidationError("captain credentials doesn't have neither username nor mobile_number")
-            return self.username if self.username else self.mobile_number
+            return make_dict(self.username, 'username') if self.username else make_dict(self.mobile_number, 'mobile_number')
         elif(self.role == Credential.Role.SUB_ADMIN):
             if not self.email:
                 raise ValidationError("Sub-Admin credentials doesn't have email")
-            return self.email
+            return make_dict(self.email, 'email')
         elif(self.role == Credential.Role.ADMIN):
             if not self.email:
                 raise ValidationError("Admin credentials doesn't have email")
-            return self.email
+            return make_dict(self.email, 'email')
         else:
             raise ValidationError("Invalid Role !!")
 
@@ -117,12 +121,24 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
                 f"For {self.role}: Invalid Credentials."
             )
 
+    def validate_mobile_number(self):
+        # Note: to use this method mobile_number shouldn't be null
+        if not check_mobile_number(self.mobile_number):
+            raise ValidationError(
+                f"this mobile number: {self.mobile_number} Is Invalid"
+            )
 
     def clean(self):
         super().clean()
         self.validate_role_credential()
+        if self.mobile_number:
+            self.validate_mobile_number()
+            self.mobile_number = normalize_mobile_number(self.mobile_number)
+
 
     def save(self, *args, **kwargs):
+        # print(f"\n\n{args}\n")
+        # print(f"\n{kwargs}\n\n")
         self.full_clean()
         return super().save(*args, **kwargs)
     
@@ -139,7 +155,7 @@ class Trader(TimeStampedModel):
         related_name='trader'
     )
     ecommerce = models.BooleanField(null=False, blank=False)
-
+    name = models.CharField(max_length=75, unique=True ,null=False, blank=False)
 
     discounts = models.ManyToManyField(
         "Discount",
@@ -181,6 +197,7 @@ class Captain(TimeStampedModel):
         blank=False
     )
     permanent = models.BooleanField(null=False, blank=False)
+    name = models.CharField(max_length=75, unique=True ,null=False, blank=False)
 
     def clean(self):
         if self.credentials.role != Credential.Role.CAPTAIN:
@@ -214,6 +231,7 @@ class Sub_Admin(TimeStampedModel):
         null=False,
         blank=False
     )
+    name = models.CharField(max_length=75, unique=True ,null=False, blank=False)
 
     def clean(self):
         if self.credentials.role != Credential.Role.SUB_ADMIN:
