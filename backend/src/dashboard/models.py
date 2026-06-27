@@ -12,6 +12,7 @@ class Location(TimeStampedModel):
 
     class Meta:
         db_table = 'locations'
+        unique_together = ['latitude', 'longitude']
 
 class Branch(TimeStampedModel):
     title = models.CharField(max_length=40, unique=True, null=False, blank=False)

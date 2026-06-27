@@ -30,7 +30,7 @@ from tools.simplejwt import CustomTokenObtainPairView
 from users.urls import users_urlpatterns
 
 simplejwt_auth_patterns = [
-    path('users/token/',  extend_schema_view(
+    path('token/',  extend_schema_view(
         post=extend_schema(
             tags=['Auth'],
             summary="Token",
@@ -51,8 +51,8 @@ simplejwt_auth_patterns = [
 api_patterns = [
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('', include(simplejwt_auth_patterns)),
-    path('', include(users_urlpatterns)),
+    path('users/', include(simplejwt_auth_patterns)),
+    path('users/', include(users_urlpatterns)),
 ]
 
 
