@@ -35,7 +35,7 @@ class CustomUserManager(BaseUserManager):
 
 
 class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
-    email = email = models.EmailField(max_length=254, unique=True, null=True, blank=True)
+    email = models.EmailField(max_length=254, unique=True, null=True, blank=True)
     mobile_number = models.CharField(max_length=25, unique=True, null=True, blank=True)
     username = models.CharField(max_length=254, unique=True, null=True, blank=True)
     class Role(models.TextChoices):
@@ -60,14 +60,18 @@ class Credential(AbstractBaseUser , PermissionsMixin , TimeStampedModel):
         claims = {
             'id': self.id,
             'role': self.role,
-        }.update(self.get_identifier())
+        }
+        claims.update(self.get_identifier())
         if(self.role == Credential.Role.TRADER):
             claims['ecommerce'] = self.trader.ecommerce
+            claims['name'] = self.trader.name
         elif(self.role == Credential.Role.CAPTAIN):
             claims['accommodation_id'] = self.captain.accommodation_id
             claims['permanent'] = self.captain.permanent
+            claims['name'] = self.captain.name
         elif(self.role == Credential.Role.SUB_ADMIN):
             claims['branch_id'] = self.sub_admin.branch.id
+            claims['name'] = self.sub_admin.name
         
         return claims
 
@@ -155,7 +159,7 @@ class Trader(TimeStampedModel):
         related_name='trader'
     )
     ecommerce = models.BooleanField(null=False, blank=False)
-    name = models.CharField(max_length=75, unique=True ,null=False, blank=False)
+    name = models.CharField(max_length=75, null=False, blank=False)
 
     discounts = models.ManyToManyField(
         "Discount",
@@ -197,7 +201,7 @@ class Captain(TimeStampedModel):
         blank=False
     )
     permanent = models.BooleanField(null=False, blank=False)
-    name = models.CharField(max_length=75, unique=True ,null=False, blank=False)
+    name = models.CharField(max_length=75, null=False, blank=False)
 
     def clean(self):
         if self.credentials.role != Credential.Role.CAPTAIN:
@@ -231,7 +235,7 @@ class Sub_Admin(TimeStampedModel):
         null=False,
         blank=False
     )
-    name = models.CharField(max_length=75, unique=True ,null=False, blank=False)
+    name = models.CharField(max_length=75 , null=False, blank=False)
 
     def clean(self):
         if self.credentials.role != Credential.Role.SUB_ADMIN:
