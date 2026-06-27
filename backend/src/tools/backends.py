@@ -1,5 +1,8 @@
 from django.contrib.auth.backends import ModelBackend
 from django.db.models import Q
+
+from tools.models import normalize_mobile_number
+
 from users.models import Credential
 
 class EmailOrMobileBackend(ModelBackend):
@@ -9,13 +12,13 @@ class EmailOrMobileBackend(ModelBackend):
             if role == Credential.Role.TRADER:
                 queryset = queryset.filter(
                     Q(email=identifier) |
-                    Q(mobile_number=identifier)
+                    Q(mobile_number=normalize_mobile_number(identifier))
                 )
 
             elif role == Credential.Role.CAPTAIN:
                 queryset = queryset.filter(
                     Q(username=identifier) |
-                    Q(mobile_number=identifier)
+                    Q(mobile_number=normalize_mobile_number(identifier))
                 )
 
             elif role == Credential.Role.SUB_ADMIN:

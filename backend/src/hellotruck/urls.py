@@ -27,8 +27,10 @@ from drf_spectacular.utils import extend_schema , extend_schema_view
 
 from tools.simplejwt import CustomTokenObtainPairView
 
+from users.urls import users_urlpatterns
+
 simplejwt_auth_patterns = [
-    path('token/',  extend_schema_view(
+    path('users/token/',  extend_schema_view(
         post=extend_schema(
             tags=['Auth'],
             summary="Token",
@@ -43,13 +45,14 @@ simplejwt_auth_patterns = [
                 }
             }
         ))(CustomTokenObtainPairView.as_view()), name='token_obtain_pair'),
-    path('token/refresh/', extend_schema_view(post=extend_schema(tags=['Auth'], summary="Refresh Token"))(TokenRefreshView.as_view()), name='token_refresh'),
+    path('users/token/refresh/', extend_schema_view(post=extend_schema(tags=['Auth'], summary="Refresh Token"))(TokenRefreshView.as_view()), name='token_refresh'),
 ]
 
 api_patterns = [
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('', include(simplejwt_auth_patterns)),
+    path('', include(users_urlpatterns)),
 ]
 
 
