@@ -1,18 +1,22 @@
 from django.shortcuts import render
 
 from rest_framework import viewsets ,status
+from rest_framework.permissions import AllowAny
 
 from tools.permissions import IsAdmin 
 
 from drf_spectacular.utils import extend_schema
 
-from .serializer import BranchSerializer
+from .serializers import BranchSerializer
+
+from .models import Branch , Location
 
 
 class BranchViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdmin]
+    # permission_classes = [AllowAny]
     serializer_class = BranchSerializer
-
+    queryset = Branch.objects.all()
 
 
     @extend_schema(
@@ -21,7 +25,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         description="Admin can Create new Branch to the company",
         tags=['Branches'],
         request={
-            'multipart/from-data':{
+            'multipart/form-data':{
                 'type': 'object',
                 'properties': {
                     "title": {"type": 'string' , "example": 'Branch A'},
@@ -33,10 +37,19 @@ class BranchViewSet(viewsets.ModelViewSet):
                     "latitude": {"type": 'double' , "example" : '36.2783'}
                 }
             }
-        }
-        
+        }  
     )
     def create (self , request , *args, **kwargs):
+        # latitude = request.GET.get("latitude")
+        # longitude = request.GET.get("longitude")
+
+        # location , created = Location.objects.get_or_create(
+        #         latitude=latitude, longitude=longitude, 
+        #     )
+        # request.add(location)
+        serializer = self.get_serializer(data = request)
+        if serializer.is_valid():
+            serializer.save()
         return super().create(request, *args, **kwargs)
 
 
@@ -76,7 +89,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         description="Admin can update Branch ",
         tags=['Branches'],
         request={
-            'multipart/from-data':{
+            'multipart/form-data':{
                 'type': 'object',
                 'properties': {
                     "title": {"type": 'string' , "example": 'Branch A'},

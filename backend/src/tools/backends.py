@@ -25,6 +25,10 @@ class EmailOrMobileBackend(ModelBackend):
                 queryset = queryset.filter(
                     email=identifier
                 )
+            elif role == Credential.Role.ADMIN:
+                queryset = queryset.filter(
+                    email=identifier
+                )
 
             else:
                 return None

@@ -1,8 +1,8 @@
 from rest_framework.permissions import BasePermission
-from .models import Credential  
+from users.models import Credential  
 
 class IsCaptain (BasePermission):
-    def has_permission(self, request, *args):
+    def has_permission(self, request, view, *args):
         if not request.user or not request.user.is_authenticated:
             return False
         
@@ -10,7 +10,7 @@ class IsCaptain (BasePermission):
     
 
 class IsTrader (BasePermission):
-     def has_permission(self, request, **args):
+     def has_permission(self, request, view, **args):
          if not request.user or not request.user.is_authenticated:
              return False
          
@@ -18,7 +18,7 @@ class IsTrader (BasePermission):
      
 
 class IsAdmin (BasePermission):
-     def has_permission(self, request, **args):
+     def has_permission(self, request , view, **args):
          if not request.user or not request.user.is_authenticated:
              return False
          
@@ -26,7 +26,7 @@ class IsAdmin (BasePermission):
      
 
 class IsSubAdmin (BasePermission):
-     def has_permission(self, request, **args):
+     def has_permission(self, request, view, **args):
          if not request.user or not request.user.is_authenticated:
              return False
          
