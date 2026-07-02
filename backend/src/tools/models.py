@@ -25,8 +25,9 @@ def check_mobile_number(mobile_number) -> bool:
 
 def normalize_mobile_number(mobile_number) -> str:
     # we have to reach +963987654321
-    mobile_number = mobile_number.replace(" ", "") # remove all whitespaces
-    length = len(mobile_number)
+    # mobile_number = mobile_number.replace(" ", "") # remove all whitespaces
+    if mobile_number is None: return "" 
+    length = len(mobile_number) 
     if length == 9: return "+963" + mobile_number
     if length == 10: return "+963" + mobile_number[1:]
     # case length == 13:
