@@ -52,3 +52,13 @@ class BranchSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+    
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = [
+            "id",
+            "latitude",
+            "longitude"
+        ]
