@@ -29,7 +29,7 @@ class Branch(TimeStampedModel):
 
 class Audit_Logs(TimeStampedModel):
     sub_admin = models.ForeignKey(
-        "users.Sub_Admin",
+        'users.Sub_Admin',
         on_delete=models.CASCADE,
         related_name='audit_logs',
         null=False,

@@ -7,7 +7,7 @@ from tools.permissions import IsAdmin
 
 from drf_spectacular.utils import extend_schema
 
-from .serializers import BranchSerializer
+from .serializers import BranchSerializer , LocationSerializer
 
 from .models import Branch , Location
 
@@ -108,3 +108,30 @@ class BranchViewSet(viewsets.ModelViewSet):
     
 
 # Create your views here.
+class LocationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAdmin]
+    queryset = Location.objects.all()
+    serializer_class = LocationSerializer
+
+    @extend_schema(
+        summary="Create Location",
+        operation_id="create_location",
+        description="Admin can Create new location to the company Branch",
+        tags=['Locations'],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties': {
+                    # "title": {"type": 'string' , "example": 'Branch A'},
+                    # "location": {
+                    #     "type": "object",
+                        
+                    # }
+                    "longitude": {"type": 'double' , "example" : '33.5104'},
+                    "latitude": {"type": 'double' , "example" : '36.2783'}
+                }
+            }
+        }  
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
