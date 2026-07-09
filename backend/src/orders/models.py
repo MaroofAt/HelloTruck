@@ -43,19 +43,33 @@ class Order(TimeStampedModel):
         null=False,
         blank=False
     )
-    destination = models.ForeignKey(
+    from_location = models.ForeignKey(
         'dashboard.Location',
         on_delete=models.CASCADE,
-        related_name='orders',
-        null=False,
-        blank=False
+        related_name='orders_from',
+        null=True,
+        blank=True
+    )
+    to_location = models.ForeignKey(
+        'dashboard.Location',
+        on_delete=models.CASCADE,
+        related_name='orders_to',
+        null=True,
+        blank=True
     )
     from_branch = models.ForeignKey(
         'dashboard.Branch',
         on_delete=models.CASCADE,
-        related_name="orders",
-        null=False,
-        blank=False
+        related_name="orders_from",
+        null=True,
+        blank=True
+    )
+    to_branch = models.ForeignKey(
+        'dashboard.Branch',
+        on_delete=models.CASCADE,
+        related_name="orders_to",
+        null=True,
+        blank=True
     )
     special_shipment = models.ForeignKey(
         "Special_Shipment",
