@@ -129,9 +129,9 @@ class OrderViewSet (viewsets.ModelViewSet):
                     'type': 'object',
                     'properties' : {
                         "order":{'type': 'integer', 'example':1 },
-                        "from_branch":{'type': 'integer', 'example':2 },
-                        "longitude": {"type": 'double' , "example" : '36.2783'},
-                        "latitude": {"type": 'double' , "example" : '33.5104'},
+                        # "from_branch":{'type': 'integer', 'example':2 },
+                        "longitude_to": {"type": 'double' , "example" : '36.2783'},
+                        "latitude_to": {"type": 'double' , "example" : '33.5104'},
 
                     }
                 }
@@ -151,6 +151,8 @@ class OrderViewSet (viewsets.ModelViewSet):
                 } , status=status.HTTP_400_BAD_REQUEST)
             # order.delivery = True
 
+            
+
             new_order_data = {
                 'volume': order.volume,
                 'weight': order.weight,
@@ -159,10 +161,14 @@ class OrderViewSet (viewsets.ModelViewSet):
                 'shipment_type': order.shipment_type,
                 'trader': order.trader.id,
                 # 'destination': order.destination.id, #changeeee
-                'from_branch': request.data.get("from_branch"), #Changeee
+                'from_branch': order.from_branch.id,
+                'to_branch' : None,
                 'special_shipment': order.special_shipment.id if order.special_shipment else None,
-                'longitude': request.data.get("longitude"),
-                'latitude': request.data.get("latitude")
+                'longitude_to': request.data.get("longitude_to"),
+                'latitude_to': request.data.get("latitude_to"),
+                'longitude_from': None,
+                'latitude_from': None,
+
             }
 
             serializer = self.get_serializer(data=new_order_data)
@@ -185,6 +191,8 @@ class OrderViewSet (viewsets.ModelViewSet):
         } , status=status.HTTP_404_NOT_FOUND)
     
 
+
+
     @extend_schema(
         summary="Update Order",
         operation_id= "update_order",
@@ -196,7 +204,7 @@ class OrderViewSet (viewsets.ModelViewSet):
                 'properties' : {
                     "volume":{'type':'double' , 'example':44.65 },
                     "weight":{'type':'double' , 'example': 15.5 },
-                    "goods_type":{'type': "string" ,'enum': ['liquid', 'need_refrigeration', 'normal_Breakable', 'normal'], 'example':'normal' },
+                    "goods_type":{'type': "string" ,'enum': ['liquid', 'need_refrigeration', 'normal_breakable', 'normal'], 'example':'normal' },
                     "delivery":{'type': "boolean" , 'example': "True" },
                     "shipment_type":{'type':"string" ,'enum': ['LTL' , 'EUV' , 'SPECIAL_SHIPMENT' , 'FROM_BRANCH' , 'TO_BRANCH' , 'ecommerce_delivery'], 'example': 'LTL'},
                     "trader":{'type': 'integer' , 'example': '1' },
@@ -233,7 +241,7 @@ class OrderViewSet (viewsets.ModelViewSet):
         #         status=status.HTTP_404_NOT_FOUND
         #     )
         
-        if request.data.get("delivery") == False and (request.data.get("from_branch") == None or request.data.get("to_branch") ==  None) :
+        if request.data.get("delivery") == False and (request.data.get("from_branch") == None and request.data.get("to_branch") ==  None) :
             return Response(
                 {"detail" : "You should select the from/to our branches not the location"} ,
                 status=status.HTTP_400_BAD_REQUEST
