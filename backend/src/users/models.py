@@ -1,9 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager , AbstractBaseUser , PermissionsMixin
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 from tools.models import TimeStampedModel, check_mobile_number, normalize_mobile_number
+
 
 # Create your models here.
 
@@ -338,3 +340,27 @@ class Vehicle(TimeStampedModel):
 
     class Meta:
         db_table= 'vehicles'
+
+
+def otp_expires_date_time():
+    return timezone.now() + timezone.timedelta(minutes=10)
+class User_OTP (TimeStampedModel):
+    class Meta:
+        db_table = 'user_otp'
+    otp = models.CharField(max_length=6, null=True, blank=True)
+    expires_at = models.DateTimeField(default=otp_expires_date_time , editable=False)
+    captain = models.ForeignKey(
+        Captain,
+        related_name="captain_otp",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    trader = models.ForeignKey(
+        Trader,
+        related_name='trader_otp',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    

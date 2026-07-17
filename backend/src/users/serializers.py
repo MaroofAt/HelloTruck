@@ -33,7 +33,7 @@ class TraderRegisterSerializer(serializers.ModelSerializer):
                 })
         except KeyError:
             raise serializers.ValidationError({
-                'password': 'This field is required.'
+                'password': 'This field is required.' 
             })
 
         attrs = super().validate(attrs)
