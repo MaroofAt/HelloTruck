@@ -1,7 +1,7 @@
 
 from rest_framework import serializers
 
-from .models import Order
+from .models import Order , Trip
 from users.models import Credential , Trader 
 from dashboard.models import Branch , Location 
 from .models import Special_Shipment
@@ -590,3 +590,17 @@ class OrderSerializer(serializers.ModelSerializer):
         
         return float(total)
     
+
+class TripSerializer (serializers.ModelSerializer):
+    
+    class Meta:
+        model = Trip
+        fields = [
+            "id",
+            "arrival_datetime",
+            "launch_datetime",
+            "status",
+        ]
+        extra_kwargs = {
+            'id': {"read_only": True},
+        }
