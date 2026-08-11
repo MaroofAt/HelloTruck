@@ -4,13 +4,14 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 
-
+from users.models import Credential  
 
 from .models import Order , Order_Load , Trip
-from .serializers import OrderSerializer
+from .serializers import OrderSerializer , TripSerializer
 
-from tools.permissions import IsTrader
+from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain
 
 from dashboard.models import Location
 
@@ -326,10 +327,185 @@ class OrderViewSet (viewsets.ModelViewSet):
         order.delete()
         return Response({"detail": "Order has been canceled and deleted "}, status=status.HTTP_200_OK)
     
+    
 
     
         
+class TripViewSet (viewsets.ModelViewSet):
+
+    permission_classes = [IsAuthenticated ]
+    serializer_class = TripSerializer
+    queryset = Trip.objects.all()
+
+    def get_permissions(self):
+        self.permission_classes = [IsAuthenticated ]
+        if  self.action == "create_trip" or self.action == "create_EUV_trip":
+            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                self.permission_classes.append(IsSubAdmin) 
+        if self.action == "change_status":
+            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                    if self.user.role != Credential.Role.SUB_ADMIN:
+                        self.permission_classes.append(IsCaptain) 
+                    else:   
+                        self.permission_classes.append(IsSubAdmin) 
+
+            # self.permission_classes.append(IsSubAdmin) 
+            # self.permission_classes.append(IsAdmin) 
+            # return [IsAuthenticated, (IsSubAdmin | IsAdmin)]
+
+
+        return super().get_permissions()
+
+    @extend_schema(
+        summary="Create Trip",
+        operation_id= "create_trip",
+        description= "sup_admin or admin want to create Trip has many order",
+        tags=["Trips"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties' : {
+                    "launch_datetime" : {
+                        "type": "string",
+                        'format': 'custom-datetime',
+                        'pattern': r'^\d{4}/\d{1,2}/\d{1,2} \d{1,2}:\d{2}$',
+                        "example":"2026-8-16 10:30"
+                        },
+                    "arrival_datetime":{
+                        "type": "string",
+                        'format': 'custom-datetime',
+                        'pattern': r'^\d{4}/\d{1,2}/\d{1,2} \d{1,2}:\d{2}$',
+                        "example":"2026-8-20 05:30"
+                    },
+                }
+            }
+        }
+    )
+    @action(detail=False , methods=["post"] , serializer_class=TripSerializer )
+    def create_trip(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data.update( {
+            "status":"pending"
+        })
+        serializer = self.get_serializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
         
+            return Response({
+                'data': serializer.data,
+                'result': ""#result
+                }, status=status.HTTP_201_CREATED
+            )
+        
+        return Response({
+            'errors': serializer.errors,
+            'result': ""#result
+            }, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @extend_schema(
+        summary="Change Status",
+        operation_id= "change_status",
+        description= "captain or sup_admin or admin want to change trip status ",
+        tags=["Trips"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties': {
+                    "status": {'type':"string" ,
+                            'enum': ["pending" , "launched" , "delivered" , "complete" , "complete_with_damage"] ,
+                            "example": 'launched'
+                    },
+                }
+            }
+        } 
+    )
+    @action(detail=True , methods=['patch'] , serializer_class = TripSerializer)
+    def change_status(self, request, *args, **kwargs):
+        trip_id = kwargs.get("pk")
+        trip = Trip.objects.filter(id=trip_id)
+        if not trip.exists():
+            return Response({"detail": "Trip Doesn't Exists"} , status=status.HTTP_404_NOT_FOUND)
+
+        trip = trip.first()
+
+        if not request.data.get("status") :
+            return Response({"detail": "status is requierd"} , status=status.HTTP_400_BAD_REQUEST)
+            
+
+        trip.status = request.data.get("status")
+        trip.save()
+
+        return Response({"data": trip},status=status.HTTP_200_OK)
+
+    
+    @extend_schema(
+        summary="Create EUV Trip",
+        operation_id= "create_EUV_trip",
+        description= "sup_admin or admin want to create Trip has many order",
+        tags=["Trips"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties' : {
+                    "launch_datetime" : {
+                        "type": "string",
+                        'format': 'custom-datetime',
+                        'pattern': r'^\d{4}/\d{1,2}/\d{1,2} \d{1,2}:\d{2}$',
+                        "example":"2026-8-16 10:30"
+                        },
+                    "arrival_datetime":{
+                        "type": "string",
+                        'format': 'custom-datetime',
+                        'pattern': r'^\d{4}/\d{1,2}/\d{1,2} \d{1,2}:\d{2}$',
+                        "example":"2026-8-20 05:30"
+                    },
+                    "order_id":{ "type": "int", "example": 1 },
+                    "vehicle_id" : {"type" : "int" , "example": 1},
+                }
+            }
+        }
+    )
+    @action(detail=False , methods=["post"] , serializer_class=TripSerializer )
+    def create_EUV_trip(self, request, *args, **kwargs):
+        if not request.date.get("vehicle_id"):
+            return Response({'detail':'vehicle_id is requierd'} , status = status.HTTP_400_BAD_REQUEST)
+
+        if not request.date.get("order_id"):
+            return Response({'detail':'order_id is requierd'} , status = status.HTTP_400_BAD_REQUEST)
+        
+        new_data = {
+            "launch_datetime": request.date.get("launch_datetime"),
+            "arrival_datetime": request.date.get("arrival_datetime"),
+            "status":"pending",
+        } 
+        serializer = TripSerializer(data = new_data)
+
+        if serializer.is_valid():
+            serializer.save()
+            order_load = Order_Load.objects.create({
+                "trip": request.data.get("id"),
+                "order": request.data.get("order"),
+                "vehicle": request.data.get("vehicle"),
+                "load_percent": 100,
+            })
+            order_load.save()
+            out_data = {
+                serializer.data,
+                order_load
+            }
+            if order_load:
+                return Response({"data":out_data}, status.HTTP_201_CREATED)
+            
+        return Response({
+            'errors': serializer.errors,
+            'result': ""#result
+            }, status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+
+
 
 
 # Create your views here.
