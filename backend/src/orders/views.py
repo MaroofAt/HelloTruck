@@ -11,7 +11,7 @@ from users.models import Credential
 from .models import Order , Order_Load , Trip
 from .serializers import OrderSerializer , TripSerializer
 
-from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain
+from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 
 from dashboard.models import Location
 
@@ -344,10 +344,18 @@ class TripViewSet (viewsets.ModelViewSet):
                 self.permission_classes.append(IsSubAdmin) 
         if self.action == "change_status":
             if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
-                    if self.user.role != Credential.Role.SUB_ADMIN:
+                    if self.request.user.role != Credential.Role.SUB_ADMIN:
                         self.permission_classes.append(IsCaptain) 
                     else:   
                         self.permission_classes.append(IsSubAdmin) 
+        if self.action == "change_status_to_complete":
+            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                    if self.request.user.role != Credential.Role.SUB_ADMIN:
+                        self.permission_classes.append(IsTrader)
+                    else:
+                        self.permission_classes.append(IsSubAdmin) 
+
+
 
             # self.permission_classes.append(IsSubAdmin) 
             # self.permission_classes.append(IsAdmin) 
@@ -413,7 +421,7 @@ class TripViewSet (viewsets.ModelViewSet):
                 'type': 'object',
                 'properties': {
                     "status": {'type':"string" ,
-                            'enum': ["pending" , "launched" , "delivered" , "complete" , "complete_with_damage"] ,
+                            'enum': ["pending" , "launched" , "delivered" ] ,
                             "example": 'launched'
                     },
                 }
@@ -434,9 +442,22 @@ class TripViewSet (viewsets.ModelViewSet):
             
 
         trip.status = request.data.get("status")
-        trip.save()
+        # trip.save()
+        serializer = self.get_serializer(instance=trip, data=request.data , partial=True)
+        if serializer.is_valid():
+            print("//////////////////////////////////////////////////////////////////")
+            serializer.save()
+        
+            return Response({
+                'data': serializer.data,
+                'result': ""#result
+                }, status=status.HTTP_201_CREATED)
 
-        return Response({"data": trip},status=status.HTTP_200_OK)
+        return Response({
+                    'errors': serializer.errors,
+                    'result': ""#result
+                    }, status=status.HTTP_400_BAD_REQUEST
+                )
 
     
     @extend_schema(
@@ -497,6 +518,55 @@ class TripViewSet (viewsets.ModelViewSet):
             if order_load:
                 return Response({"data":out_data}, status.HTTP_201_CREATED)
             
+        return Response({
+            'errors': serializer.errors,
+            'result': ""#result
+            }, status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+    @extend_schema(
+            summary="Change Status to Complete",
+            operation_id= "change_status_to_complete",
+            description= "trader or sup_admin or admin want to change trip status ",
+            tags=["Trips"],
+            request={
+                'multipart/form-data':{
+                    'type': 'object',
+                    'properties': {
+                        "status": {'type':"string" ,
+                                'enum': ["complete" , "complete_with_damage"] ,
+                                "example": 'complete'
+                        },
+                    }
+                }
+            } 
+        )
+    @action(detail=True , methods=['patch'] , serializer_class = TripSerializer)
+    def change_status_to_complete(self, request, *args, **kwargs):
+        trip_id = kwargs.get("pk")
+        trip = Trip.objects.filter(id=trip_id)
+        if not trip.exists():
+            return Response({"detail": "Trip Doesn't Exists"} , status=status.HTTP_404_NOT_FOUND)
+
+        trip = trip.first()
+
+        if not request.data.get("status") :
+            return Response({"detail": "status is requierd"} , status=status.HTTP_400_BAD_REQUEST)
+            
+
+        trip.status = request.data.get("status")
+        # trip.save()
+        serializer = self.get_serializer(instance=trip, data=request.data , partial=True)
+        if serializer.is_valid():
+            print("//////////////////////////////////////////////////////////////////")
+            serializer.save()
+        
+            return Response({
+                'data': serializer.data,
+                'result': ""#result
+                }, status=status.HTTP_201_CREATED)
+
         return Response({
             'errors': serializer.errors,
             'result': ""#result
