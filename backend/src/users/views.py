@@ -10,11 +10,11 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 from django.utils import timezone 
 from datetime import timedelta
 
-
+from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 from tools.responses import method_not_allowed, exception_response
 
-from .models import Credential, Trader, Captain, Sub_Admin , User_OTP
-from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer
+from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle
+from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer
 from .utils import send_otp_by_sms , send_otp_email_to_user
 
 # Create your views here.
@@ -483,3 +483,46 @@ class Sub_AdminViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         return method_not_allowed()
         return super().destroy(request, *args, **kwargs)
+
+
+class VehicleViewSet(ModelViewSet):
+    queryset = Vehicle.objects.all()
+    serializer_class = VehicleSerializer
+    permission_classes = [IsAuthenticated ]
+
+
+    def get_permissions(self):
+        if self.action == "create_vehicle":
+            print("/////////////////////////////////////////////////////////////////////////")
+            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                if self.request.user.role != Credential.Role.SUB_ADMIN:
+                    self.permission_classes.append(IsCaptain)
+                else:
+                    self.permission_classes.append(IsSubAdmin) 
+        return super().get_permissions()
+
+    @extend_schema(
+        summary="Create Vehicle",
+        operation_id= "create_vehicle",
+        description= "captain or sub_admin or admin want to vehicle",
+        tags=["Vehicle"],
+        request={
+            'application/json':{
+                'type': 'object',
+                'properties' : {
+                    "type":{'type':'string' , 'example':'a' },
+                    "accepted_volume":{'type':'double' , 'example': 1.5 },
+                    "fuel_consumption_per_1km":{'type': "double" , 'example': "0.5" },
+                    "feul_type":{'type': 'string' ,'example':"a" },
+                    "verified":{'type': 'boolean', 'example':True },
+                    "delivery":{'type': 'boolean', 'example':False },
+                    "captain":{'type': 'integer' , 'example': '1' }
+                }
+            }
+        }
+    )
+    @action(detail=False , methods=["post"] , serializer_class = VehicleSerializer)
+    def create_vehicle(self, request, *args, **kwargs):
+        # serializer = 
+        return super().create(request, *args, **kwargs)
+        

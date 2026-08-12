@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from tools.models import check_mobile_number, normalize_mobile_number
 
-from .models import Credential, Trader, Captain, Sub_Admin
+from .models import Credential, Trader, Captain, Sub_Admin , Vehicle
 from dashboard.models import Location
 
 class TraderRegisterSerializer(serializers.ModelSerializer):
@@ -232,7 +232,7 @@ class CaptainRegisterSerializer(serializers.ModelSerializer):
                     mobile_number = mobile_number,
                     password = validated_data['password']
                 )
-                accommodation = Location.objects.get_or_create(
+                accommodation, _ = Location.objects.get_or_create(
                     latitude = validated_data['latitude'],
                     longitude = validated_data['longitude']
                 )
@@ -338,3 +338,39 @@ class Sub_AdminSerializer(serializers.ModelSerializer):
         representation['credentials'] = credentials.get_identifier()
 
         return representation
+
+
+class VehicleSerializer(serializers.ModelSerializer):
+    captain = serializers.PrimaryKeyRelatedField(
+            queryset=Captain.objects.all(),
+            required=True
+        )
+
+    class Meta:
+        model = Vehicle
+        fields = [
+            "id",
+            "type",
+            "accepted_volume",
+            "fuel_consumption_per_1km",
+            "feul_type",
+            "verified",
+            "delivery",
+            "captain",
+        ]
+        extra_kwargs = {
+            'id': {'read_only':True}
+        } 
+
+        def create(self, validated_data):
+            validated_data["type"] = 'a'
+            validated_data["feul_type"] = 'a'
+
+            captain_id = validated_data["captain"]
+            captain = Captain.objects.filter(id=captain_id)
+
+            if not captain.exists():
+                raise serializers.ValidationError("Captain doesn't exist")
+
+            vehicle = Vehicle.objects.create(**validated_data)
+            return vehicle

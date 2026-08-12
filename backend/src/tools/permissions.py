@@ -6,7 +6,7 @@ class IsCaptain (BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         
-        return request.user.role == Credential.ROLE.CAPTAIN
+        return request.user.role == Credential.Role.CAPTAIN
     
 
 class IsTrader (BasePermission):
