@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 from rest_framework import viewsets ,status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny , IsAuthenticated
 
 from tools.permissions import IsAdmin 
 
@@ -13,11 +13,19 @@ from .models import Branch , Location
 
 
 class BranchViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated]
     # permission_classes = [AllowAny]
     serializer_class = BranchSerializer
     queryset = Branch.objects.all()
 
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            self.permission_classes.append(IsAdmin)
+        if self.request.method == 'PATCH':
+            self.permission_classes.append(IsAdmin)   
+        if self.request.method == 'DELETE':
+            self.permission_classes.append(IsAdmin)  
+        return super().get_permissions()
 
     @extend_schema(
         summary="Create Branch",
