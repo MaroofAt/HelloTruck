@@ -55,6 +55,8 @@ class BranchViewSet(viewsets.ModelViewSet):
         #         latitude=latitude, longitude=longitude, 
         #     )
         # request.add(location)
+        # print(request.data)
+
         serializer = self.get_serializer(data = request)
         if serializer.is_valid():
             serializer.save()
