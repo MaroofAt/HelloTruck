@@ -5,6 +5,7 @@ from tools.models import check_mobile_number, normalize_mobile_number
 
 from .models import Credential, Trader, Captain, Sub_Admin , Vehicle
 from dashboard.models import Location
+from orders.models import Trip
 
 class TraderRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True,required=True,style={'input_type': 'password'})
@@ -262,6 +263,28 @@ class CaptainRegisterSerializer(serializers.ModelSerializer):
         return representation
 
 
+class ListCaptainTripsSerializer(serializers.ModelSerializer):
+    longitude = serializers.FloatField(source='order_load.order.branch.location.longitude',read_only=True)
+    latitude = serializers.FloatField(source='order.branch.location.latitude',read_only=True)
+    class Meta:
+        model = Trip
+        fields = [
+            'id',
+            'status',
+            'arrival_datetime',
+            'launch_datetime',
+            'longitude',
+            'latitude'
+        ]
+        extra_kwargs = {
+            'id':{"read_only":True},
+            'arrival_datetime':{"read_only":True},
+            'launch_datetime':{"read_only":True},
+            'status':{"read_only":True},
+        }
+
+
+
 class Sub_AdminSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True,required=True,style={'input_type': 'password'})
     email = serializers.EmailField(max_length=254, write_only=True, allow_null=False)
@@ -349,11 +372,11 @@ class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            "id",
+            "id",   
             "type",
             "accepted_volume",
             "fuel_consumption_per_1km",
-            "feul_type",
+            "fuel_type",
             "verified",
             "delivery",
             "captain",
@@ -362,15 +385,15 @@ class VehicleSerializer(serializers.ModelSerializer):
             'id': {'read_only':True}
         } 
 
-        def create(self, validated_data):
-            validated_data["type"] = 'a'
-            validated_data["feul_type"] = 'a'
+    def create(self, validated_data):
+        validated_data["type"] = 'a'
+        validated_data["feul_type"] = 'a'
 
-            captain_id = validated_data["captain"]
-            captain = Captain.objects.filter(id=captain_id)
+        captain_id = validated_data["captain"]
+        captain = Captain.objects.filter(id=captain_id)
 
-            if not captain.exists():
-                raise serializers.ValidationError("Captain doesn't exist")
+        if not captain.exists():
+            raise serializers.ValidationError("Captain doesn't exist")
 
-            vehicle = Vehicle.objects.create(**validated_data)
-            return vehicle
+        vehicle = Vehicle.objects.create(**validated_data)
+        return vehicle

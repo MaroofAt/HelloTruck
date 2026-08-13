@@ -321,7 +321,7 @@ class Vehicle(TimeStampedModel):
         A='a'
         # TODOOOOOOOO  'gasoline' , 'diesel'
     
-    feul_type = models.CharField(
+    fuel_type  = models.CharField(
         max_length=100,
         choices=FuelType.choices,
         default=FuelType.A,
