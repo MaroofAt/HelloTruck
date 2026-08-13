@@ -14,7 +14,7 @@ from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain
 from tools.responses import method_not_allowed, exception_response
 
 from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle
-from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer
+from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer
 from .utils import send_otp_by_sms , send_otp_email_to_user
 
 # Create your views here.
@@ -221,6 +221,8 @@ class CaptainViewSet(ModelViewSet):
     serializer_class = CaptainRegisterSerializer #TODO change to Captain Serializer later
 
     def get_permissions(self):
+        if self.action == "list_captain_trips":
+            self.permission_classes.append(IsCaptain)
         return super().get_permissions()
     def get_queryset(self):
         return super().get_queryset()
@@ -418,6 +420,33 @@ class CaptainViewSet(ModelViewSet):
             )
         except Exception as e:
             return exception_response(e)
+
+    @extend_schema(
+        summary="List Captain Trips",
+        operation_id= "list_captain_trips",
+        description= "captain want to see his trips",
+        tags=["Captains"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties': {
+                    # "status": {'type':"string" ,
+                    #         'enum': ["pending" , "launched" , "delivered" ] ,
+                    #         "example": 'launched'
+                    # },
+                }
+            }
+        } 
+    )
+    @action(detail=False , methods=["GET"] , serializer_class = ListCaptainTripsSerializer )
+    def list_captain_trips(self, request , *args, **kwargs):
+        data = request.data.copy()
+        data["id"] = request.user.id
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors , status.HTTP_400_BAD_REQUEST)
+    
 class Sub_AdminViewSet(ModelViewSet):
     queryset = Sub_Admin.objects.all()
     serializer_class = Sub_AdminSerializer
@@ -504,7 +533,7 @@ class VehicleViewSet(ModelViewSet):
     @extend_schema(
         summary="Create Vehicle",
         operation_id= "create_vehicle",
-        description= "captain or sub_admin or admin want to vehicle",
+        description= "captain or sub_admin or admin want to create vehicle",
         tags=["Vehicle"],
         request={
             'application/json':{
@@ -513,7 +542,7 @@ class VehicleViewSet(ModelViewSet):
                     "type":{'type':'string' , 'example':'a' },
                     "accepted_volume":{'type':'double' , 'example': 1.5 },
                     "fuel_consumption_per_1km":{'type': "double" , 'example': "0.5" },
-                    "feul_type":{'type': 'string' ,'example':"a" },
+                    "fuel_type ":{'type': 'string' ,'example':"a" },
                     "verified":{'type': 'boolean', 'example':True },
                     "delivery":{'type': 'boolean', 'example':False },
                     "captain":{'type': 'integer' , 'example': '1' }
@@ -525,4 +554,46 @@ class VehicleViewSet(ModelViewSet):
     def create_vehicle(self, request, *args, **kwargs):
         # serializer = 
         return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update Vehicle",
+        operation_id= "update_vehicle",
+        description= "captain or sub_admin or admin want to update vehicle",
+        tags=["Vehicle"],
+        request={
+            'application/json':{
+                'type': 'object',
+                'properties' : {
+                    "type":{'type':'string' , 'example':'a' },
+                    "accepted_volume":{'type':'double' , 'example': 1.5 },
+                    "fuel_consumption_per_1km":{'type': "double" , 'example': "0.5" },
+                    "fuel_type ":{'type': 'string' ,'example':"a" },
+                    "verified":{'type': 'boolean', 'example':True },
+                    "delivery":{'type': 'boolean', 'example':False },
+                    # "captain":{'type': 'integer' , 'example': '1' }
+                }
+            }
+        }
+    )
+    @action(detail=True , methods=["PATCH"] , serializer_class = VehicleSerializer)
+    # TODO i have to fix the Bug
+    def update_vehicle(self, request, *args, **kwargs):
         
+        vehicle = Vehicle.objects.filter(id=kwargs.get("pk")).first()
+        # credential = Credential. 
+        re_captain = Captain.objects.filter(credentials=request.user.id).first()
+        print(vehicle.captain.id)
+        print(re_captain.id)
+        print("///////////////////////////////////////////////////")
+        if  (request.user.role == Credential.Role.CAPTAIN) and (vehicle.captain.id != re_captain.id):
+            return Response({
+                "detail":"you are not the vehicle captain"
+            }, status.HTTP_400_BAD_REQUEST)
+        
+        if (vehicle.verified == True) and (request.user.role == Credential.Role.CAPTAIN):
+            return Response({
+                "detail":"the vehicle is verified so you can't change the details"
+            }, status.HTTP_400_BAD_REQUEST)
+
+        return super().partial_update(request, *args, **kwargs)
+  
