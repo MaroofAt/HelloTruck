@@ -545,7 +545,8 @@ class VehicleViewSet(ModelViewSet):
                     "fuel_type ":{'type': 'string' ,'example':"a" },
                     "verified":{'type': 'boolean', 'example':True },
                     "delivery":{'type': 'boolean', 'example':False },
-                    "captain":{'type': 'integer' , 'example': '1' }
+                    "captain":{'type': 'integer' , 'example': '1' },
+                    'image': {'type': 'string' , 'format': 'binary'}
                 }
             }
         }
@@ -570,6 +571,7 @@ class VehicleViewSet(ModelViewSet):
                     "fuel_type ":{'type': 'string' ,'example':"a" },
                     "verified":{'type': 'boolean', 'example':True },
                     "delivery":{'type': 'boolean', 'example':False },
+                    'image': {'type': 'string' , 'format': 'binary'}
                     # "captain":{'type': 'integer' , 'example': '1' }
                 }
             }

@@ -380,20 +380,28 @@ class VehicleSerializer(serializers.ModelSerializer):
             "verified",
             "delivery",
             "captain",
+            'image'
         ]
         extra_kwargs = {
-            'id': {'read_only':True}
+            'id': {'read_only':True},
+            'image': {'required': False},
         } 
 
     def create(self, validated_data):
         validated_data["type"] = 'a'
-        validated_data["feul_type"] = 'a'
+        validated_data["fuel_type"] = 'a'
 
-        captain_id = validated_data["captain"]
-        captain = Captain.objects.filter(id=captain_id)
+        captain = validated_data["captain"]
+        captain = Captain.objects.filter(id=captain.id)
 
         if not captain.exists():
             raise serializers.ValidationError("Captain doesn't exist")
+        image = validated_data.pop('image', None)
+        instance = super().create(validated_data)
+        if image is not None:
+            instance.image = image
+            instance.save()
 
-        vehicle = Vehicle.objects.create(**validated_data)
-        return vehicle
+        # vehicle = Vehicle.objects.create(**validated_data)
+        # return vehicle
+        return instance
