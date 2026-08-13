@@ -301,6 +301,14 @@ class Discount_Traders(TimeStampedModel):
         db_table= 'discounts_traders'
         unique_together= ['discount', 'trader']
 
+
+
+def vehicle_image_upload_path(instance , filename):
+    if not instance.id:
+        # Handle case where instance isn't saved yet
+        return f'vehicle/temp/{filename}'
+    return f'vehicle/{instance.id}/{filename}'
+
 class Vehicle(TimeStampedModel):
 
     class Type(models.TextChoices):
@@ -336,6 +344,12 @@ class Vehicle(TimeStampedModel):
         on_delete=models.CASCADE,
         null=False,
         blank=False,
+    )
+    image = models.ImageField(
+        null=True,
+        blank=True,
+        upload_to=vehicle_image_upload_path,
+        default="defaults/vehicle/default.png"
     )
 
     class Meta:
