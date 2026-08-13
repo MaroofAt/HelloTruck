@@ -8,12 +8,14 @@ from rest_framework.permissions import IsAuthenticated
 
 from users.models import Credential  
 
-from .models import Order , Order_Load , Trip
+from .models import Order , Order_Load , Trip 
 from .serializers import OrderSerializer , TripSerializer
 
 from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 
 from dashboard.models import Location
+
+from users.models import Trader
 
 from drf_spectacular.utils import extend_schema
 
@@ -41,7 +43,7 @@ class OrderViewSet (viewsets.ModelViewSet):
                     # "distance":{'type':"string" , 'example': "100km"},
                     "delivery":{'type': "boolean" , 'example': "True" },
                     "shipment_type":{'type':"string" ,'enum': ['LTL' , 'EUV' , 'SPECIAL_SHIPMENT' , 'FROM_BRANCH' , 'TO_BRANCH' , 'ecommerce_delivery'], 'example': 'LTL'},
-                    "trader":{'type': 'integer' , 'example': '1' },
+                    # "trader":{'type': 'integer' , 'example': '1' },
                     # "destination":{'type':'integer' , 'example':1 },
                     "from_branch":{'type': 'integer', 'example':2 },
                     "to_branch":{'type': 'integer', 'example':3 },
@@ -70,14 +72,18 @@ class OrderViewSet (viewsets.ModelViewSet):
                 {"detail" : "the delivery flag should be True"} ,
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # print(type(request.user.id), "//////////////////////////////////////")
-        # print(type(request.data.get("trader")) ,"//////////////////////////////////////")
-        if request.user.id != int(request.data.get("trader")):
-            return Response(
-                {"detail" : "You are note the Authenticated Trader"} ,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+
+        trader = Trader.objects.filter(credentials_id=request.user.id)
+        trader = trader.first()
+        data = request.data.copy()
+        data['trader'] = trader.id
+        # print(request.user.id, "//////////////////////////////////////")
+        # print(request.data.get("trader") ,"//////////////////////////////////////")
+        # if request.user.id != int(request.data.get("trader")):
+        #     return Response(
+        #         {"detail" : "You are note the Authenticated Trader"} ,
+        #         status=status.HTTP_400_BAD_REQUEST
+        #     )
         
         # destination = Location.objects.get(id=request.data.get("destination"))
         # if not destination:
@@ -103,7 +109,7 @@ class OrderViewSet (viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=data)
         
         if serializer.is_valid():
             serializer.save()
