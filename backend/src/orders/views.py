@@ -603,34 +603,38 @@ class TripViewSet (viewsets.ModelViewSet):
     )
     @action(detail=False , methods=['post'] , serializer_class=LoadTripSerializer)
     def load_trip_manually(self,request , *args, **kwargs):
-        # orders_ids = request.data.get("orders" , [])
-        # if isinstance(orders_ids, str):
-        #     orders_ids = [int(id.strip()) for id in orders_ids.split(',')]
-        # elif isinstance(orders_ids, list):
-        #     orders_ids = [int(id) for id in orders_ids]
-        # # print(orders_ids[0])
+
+        print(request.data)
+        data = dict(request.data)
+
+        for key in ['trip', 'vehicle']:
+            if isinstance(data.get(key), list) and len(data[key]) == 1:
+                data[key] = data[key][0]
+
+        orders_raw = data.get('orders')
         
-        # return Response({} , status.HTTP_200_OK)
-        
-        # Validate input
-        input_serializer = self.serializer_class(data=request.data)
+
+        orders_raw = data.get('orders')
+        if orders_raw is not None:
+            data['orders'] = self._parse_order_list(orders_raw)
+
+
+        input_serializer = LoadTripSerializer(data=data)
         input_serializer.is_valid(raise_exception=True)
         order_ids = input_serializer.validated_data['orders']
         trip_id = input_serializer.validated_data['trip']
         vehicle_id = input_serializer.validated_data['vehicle']
 
-        # Fetch objects
+
         trip = get_object_or_404(Trip, id=trip_id)
         vehicle = get_object_or_404(Vehicle, id=vehicle_id)
 
-        # Optional: trip should be pending
+
         if trip.status != Trip.Status.PENDING:
             return Response(
                 {"detail": "Trip must be in 'pending' state to load orders."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        # Fetch orders
         orders = Order.objects.filter(id__in=order_ids)
         if len(orders) != len(order_ids):
             missing = set(order_ids) - set(orders.values_list('id', flat=True))
@@ -639,7 +643,6 @@ class TripViewSet (viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Optional: check if any order is already loaded in another trip
         already_loaded = Order_Load.objects.filter(order__in=orders).exists()
         if already_loaded:
             loaded_order_ids = Order_Load.objects.filter(order__in=orders).values_list('order_id', flat=True)
@@ -648,7 +651,7 @@ class TripViewSet (viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check capacity
+
         total_volume = 0
         for order in orders:
             if order.volume > vehicle.accepted_volume:
@@ -664,9 +667,7 @@ class TripViewSet (viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # If we had weight capacity, we'd check sum of weights here
-
-        # Create Order_Load records atomically
+        
         with transaction.atomic():
             order_loads = []
             for order in orders:
@@ -691,7 +692,34 @@ class TripViewSet (viewsets.ModelViewSet):
         )
 
 
+    def _parse_order_list(self, value):
+        """Convert various input formats to a list of integers."""
+        if isinstance(value, list):
+            result = []
+            for item in value:
+                if isinstance(item, str) and ',' in item:
+                    # Split comma-separated string (e.g., "2,3,1")
+                    result.extend(int(x.strip()) for x in item.split(',') if x.strip())
+                else:
+                    result.append(int(item))
+            return result
 
+        elif isinstance(value, dict):
+            # Handles "orders[0]=1&orders[1]=2"
+            return [int(v) for v in value.values()]
+
+        elif isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return []
+            if ',' in value:
+                return [int(x.strip()) for x in value.split(',') if x.strip()]
+            else:
+                return [int(value)]
+
+        else:
+            # Fallback: let the serializer handle invalid types
+            return []
 
 
 
