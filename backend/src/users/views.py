@@ -541,6 +541,10 @@ class VehicleViewSet(ModelViewSet):
                     self.permission_classes.append(IsCaptain)
                 else:
                     self.permission_classes.append(IsSubAdmin) 
+            if self.action == "list_vehicle":
+                if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                    self.permission_classes.append(IsSubAdmin) 
+                self.permission_classes.append(IsAdmin) 
         return super().get_permissions()
 
     @extend_schema(
@@ -611,4 +615,14 @@ class VehicleViewSet(ModelViewSet):
             }, status.HTTP_400_BAD_REQUEST)
 
         return super().partial_update(request, *args, **kwargs)
-  
+
+    
+    @extend_schema(
+        summary="List Vehicle",
+        operation_id= "list_vehicle",
+        description= "sub_admin or admin want to List vehicle",
+        tags=["Vehicle"],
+    )
+    @action(detail=False , methods=["GET"] , serializer_class = VehicleSerializer)
+    def list_vehicle(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
