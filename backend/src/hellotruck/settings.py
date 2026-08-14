@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'dotenv',
     'rest_framework_simplejwt',
     'drf_spectacular',
+    'corsheaders',
     # 'django_extensions',
 
     # own
