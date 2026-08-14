@@ -26,21 +26,34 @@ from drf_spectacular.utils import extend_schema
 
 
 class OrderViewSet (viewsets.ModelViewSet):
-    permission_classes = [IsTrader]
+    permission_classes = [IsTrader | IsAdmin ]
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
 
-    def get_permissions(self):
-        if self.action == "list":
-            # return [IsAdmin , IsSubAdmin]
-            # self.permission_classes.pop(IsTrader)
-            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
-                self.permission_classes.append(IsSubAdmin) 
-            # self.permission_classes.append(IsAdmin) 
+    # def get_permissions(self):
+    #     if self.action == "list":
+    #         # return [IsAdmin , IsSubAdmin]
+    #         # self.permission_classes.pop(IsTrader)
+    #         if self.request.user.is_authenticated and self.request.user.role == Credential.Role.SUB_ADMIN:
+    #             print(Credential.Role.SUB_ADMIN)
 
-        if self.action == "create_order" or self.action == "create_delivery_after_shipment" or self.action == "update_order" or self.action == 'cancel_order':
-            self.permission_classes.append(IsTrader)
+    #             self.permission_classes.append(IsSubAdmin) 
+    #         # self.permission_classes.append(IsAdmin) 
+
+    #     if self.action == "create_order" or self.action == "create_delivery_after_shipment" or self.action == "update_order" or self.action == 'cancel_order':
+    #         self.permission_classes.append(IsTrader)
+    #     return super().get_permissions()
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            self.permission_classes = [IsAdmin | IsSubAdmin]
+        elif self.action in ['create', 'partial_update', 'update', 'destroy',
+                             'cancel_order', 'create_delivery_after_shipment']:
+            self.permission_classes = [IsTrader]
+        else:
+            self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
+
     
 
     @extend_schema(
@@ -76,6 +89,10 @@ class OrderViewSet (viewsets.ModelViewSet):
         }
     )
     def create (self, request, *args, **kwargs):
+        if request.user.role == Credential.Role.ADMIN:
+            return Response({
+                "detail": "you don't have the permission "
+            } , status.HTTP_403_FORBIDDEN)
         print(request.data)
         
         if request.data.get("delivery") == True and request.data.get("shipment_type") not in ['FROM_BRANCH' , 'TO_BRANCH' , 'ecommerce_delivery' , 'SPECIAL_SHIPMENT']:
@@ -92,7 +109,8 @@ class OrderViewSet (viewsets.ModelViewSet):
         trader = Trader.objects.filter(credentials_id=request.user.id)
         trader = trader.first()
         data = request.data.copy()
-        data['trader'] = trader.id
+
+        data['trader'] = trader.id 
         # print(request.user.id, "//////////////////////////////////////")
         # print(request.data.get("trader") ,"//////////////////////////////////////")
         # if request.user.id != int(request.data.get("trader")):
@@ -356,6 +374,11 @@ class OrderViewSet (viewsets.ModelViewSet):
         tags=["Order"],
     )
     def list(self, request, *args, **kwargs):
+        print(request.user.role)
+        if request.user.role == Credential.Role.TRADER:
+            return Response({
+                "detail": "you don't have the permission "
+            } , status.HTTP_403_FORBIDDEN)
         return super().list(request, *args, **kwargs)
     
     

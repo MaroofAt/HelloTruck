@@ -466,7 +466,7 @@ class Sub_AdminViewSet(ModelViewSet):
 
     def get_permissions(self):
         self.permission_classes = [AllowAny]
-        if self.action == 'create':
+        if self.action == 'create' or self.action == 'list':
             self.permission_classes.append(IsAuthenticated)
             self.permission_classes.append(IsAdminUser)
         return super().get_permissions()
@@ -505,9 +505,14 @@ class Sub_AdminViewSet(ModelViewSet):
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
-    @extend_schema(exclude=True)
+    @extend_schema(
+        summary="List Sub Admin",
+        operation_id= "list_sub_admin",
+        description= "admin want to List Sub Admin",
+        tags=["Sub_Admin"],
+    )
     def list(self, request, *args, **kwargs):
-        return method_not_allowed()
+        # return method_not_allowed()
         return super().list(request, *args, **kwargs)
     @extend_schema(exclude=True)
     def retrieve(self, request, *args, **kwargs):
