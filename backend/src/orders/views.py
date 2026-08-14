@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.db.models import Q, Count
 
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -11,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from users.models import Credential  
 
 from .models import Order , Order_Load , Trip 
-from .serializers import OrderSerializer , TripSerializer , LoadTripSerializer
+from .serializers import OrderSerializer , TripSerializer , LoadTripSerializer , AutoLoadTripSerializer
 
 from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 
@@ -347,7 +348,7 @@ class TripViewSet (viewsets.ModelViewSet):
 
     def get_permissions(self):
         self.permission_classes = [IsAuthenticated ]
-        if  self.action == "create_trip" or self.action == "create_EUV_trip":
+        if  self.action == "create_trip" or self.action == "create_EUV_trip" or self.action == "load_trip_manually" or self.action == "auto_load_trip":
             if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
                 self.permission_classes.append(IsSubAdmin) 
         if self.action == "change_status":
@@ -363,9 +364,6 @@ class TripViewSet (viewsets.ModelViewSet):
                     else:
                         self.permission_classes.append(IsSubAdmin)
 
-        if self.action == "load_trip_manually":
-            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
-                self.permission_classes.append(IsSubAdmin) 
 
 
 
@@ -720,6 +718,139 @@ class TripViewSet (viewsets.ModelViewSet):
         else:
             # Fallback: let the serializer handle invalid types
             return []
+
+
+
+    @extend_schema(
+        summary="Auto Load Trip",
+        operation_id= "auto_load_trip",
+        description= "sup_admin or admin want to load the trip automatically ",
+        tags=["Trips"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties': {
+                    "trip": {'type':'int' , 'example':1},
+                    'vehicle':{'type':'int' , 'example':1},
+                }
+            }
+        } 
+    )
+    @action(detail=False, methods=['post'], serializer_class=AutoLoadTripSerializer)
+    def auto_load(self, request, *args, **kwargs):
+
+        input_serializer = AutoLoadTripSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        trip_id = input_serializer.validated_data['trip']
+        vehicle_id = input_serializer.validated_data['vehicle']
+
+        trip = get_object_or_404(Trip, id=trip_id)
+        vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+
+        if trip.status != Trip.Status.PENDING:
+            return Response(
+                {"detail": "Trip must be in 'pending' state to load orders."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+        already_loaded = Order_Load.objects.filter(trip=trip)
+        used_volume = sum(ol.order.volume for ol in already_loaded)
+        remaining_capacity = vehicle.accepted_volume - used_volume
+
+        if remaining_capacity <= 0:
+            return Response(
+                {"detail": f"Trip already fully loaded (used {used_volume} of {vehicle.accepted_volume} volume)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        base_orders = Order.objects.filter(
+            delivery=False
+        ).exclude(
+            id__in=Order_Load.objects.values_list('order_id', flat=True)
+        )
+
+        if not base_orders.exists():
+            return Response(
+                {"detail": "No available non-delivery orders to load."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        #  Find the most common (from_branch, to_branch) pair
+        branch_groups = base_orders.values('from_branch', 'to_branch') \
+            .annotate(count=Count('id')) \
+            .order_by('-count')
+        best_group = branch_groups.first()
+
+        if not best_group:
+            return Response(
+                {"detail": "No orders with branch information."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from_branch_id = best_group['from_branch']
+        to_branch_id = best_group['to_branch']
+
+
+        filter_kwargs = {}
+        if from_branch_id is None:
+            filter_kwargs['from_branch__isnull'] = True
+        else:
+            filter_kwargs['from_branch'] = from_branch_id
+
+        if to_branch_id is None:
+            filter_kwargs['to_branch__isnull'] = True
+        else:
+            filter_kwargs['to_branch'] = to_branch_id
+
+
+        available_orders = base_orders.filter(**filter_kwargs).order_by('volume')
+
+        loaded_orders = []
+        total_volume = 0
+        for order in available_orders:
+            if order.volume > vehicle.accepted_volume:
+                continue  # too big for vehicle
+            if total_volume + order.volume <= remaining_capacity:
+                loaded_orders.append(order)
+                total_volume += order.volume
+            else:
+                break
+
+        if not loaded_orders:
+            return Response(
+                {"detail": "No suitable orders found within remaining capacity for the selected branch pair."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+            order_loads = []
+            for order in loaded_orders:
+                load_percent = (order.volume / vehicle.accepted_volume) * 100
+                order_loads.append(
+                    Order_Load(
+                        order=order,
+                        trip=trip,
+                        vehicle=vehicle,
+                        load_percent=load_percent
+                    )
+                )
+            Order_Load.objects.bulk_create(order_loads)
+
+        return Response(
+            {
+                "message": f"Successfully auto-loaded {len(loaded_orders)} orders to trip {trip.id}.",
+                "loaded_orders": [order.id for order in loaded_orders],
+                "total_volume": total_volume,
+                "used_capacity": used_volume + total_volume,
+                "remaining_capacity": remaining_capacity - total_volume,
+                "vehicle_capacity": vehicle.accepted_volume,
+                "from_branch": from_branch_id,
+                "to_branch": to_branch_id
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 

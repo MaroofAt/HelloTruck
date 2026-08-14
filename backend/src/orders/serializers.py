@@ -315,7 +315,6 @@ class OrderSerializer(serializers.ModelSerializer):
     
 
     def calculate_distance(self , fromm , to):
-        print("//////////////////////////////////////////////////////////////////////////////////")
         # damascuse 
             # Latitude: 33.518529
             # Longitude: 36.302309
@@ -334,7 +333,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         if site1.exists():
             site1 = site1.first()
-            location1 = Location.objects.filter(pk=site1.id).first()
+            location1 = Location.objects.filter(pk=site1.location.id).first()
 
         else:
             location1 = Location.objects.filter(pk=fromm.id).first()
@@ -343,7 +342,7 @@ class OrderSerializer(serializers.ModelSerializer):
         if site2.exists():
             site2 = site2.first()
 
-            location2 = Location.objects.filter(pk = site2.id).first()
+            location2 = Location.objects.filter(pk = site2.location.id).first()
 
         else :
             location2 = Location.objects.filter(pk = to.id).first()
@@ -354,7 +353,8 @@ class OrderSerializer(serializers.ModelSerializer):
         # # branch2 = Branch.objects.filter(pk = destination.id).first()
         # location1 = Location.objects.filter(pk=branch1.id).first()
         # location2 = Location.objects.filter(pk = to.id).first()
-
+        print("//////////////////////////////////////////////////////////////////////////////////")
+        print(site1.id)
         lat1 = location1.latitude
         lon1 = location1.longitude
         lat2 = location2.latitude
@@ -615,3 +615,9 @@ class LoadTripSerializer(serializers.Serializer):
     )
     trip = serializers.IntegerField(help_text="Trip ID")
     vehicle = serializers.IntegerField(help_text="Vehicle ID")
+
+
+
+class AutoLoadTripSerializer(serializers.Serializer):
+    trip = serializers.IntegerField()
+    vehicle = serializers.IntegerField()
