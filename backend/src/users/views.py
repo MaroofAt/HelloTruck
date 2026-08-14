@@ -14,7 +14,7 @@ from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain
 from tools.responses import method_not_allowed, exception_response
 
 from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle
-from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer
+from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer
 from .utils import send_otp_by_sms , send_otp_email_to_user
 
 # Create your views here.
@@ -218,11 +218,18 @@ class TraderViewSet(ModelViewSet):
     
 class CaptainViewSet(ModelViewSet):
     queryset = Captain.objects.all()
-    serializer_class = CaptainRegisterSerializer #TODO change to Captain Serializer later
+    serializer_class = CaptainSerializer
+    # serializer_class = CaptainRegisterSerializer #TODO change to Captain Serializer later
 
     def get_permissions(self):
         if self.action == "list_captain_trips":
             self.permission_classes.append(IsCaptain)
+        if self.action == "list_captain":
+            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                self.permission_classes.append(IsSubAdmin) 
+            self.permission_classes.append(IsAdmin) 
+            
+
         return super().get_permissions()
     def get_queryset(self):
         return super().get_queryset()
@@ -273,7 +280,7 @@ class CaptainViewSet(ModelViewSet):
     @action(detail=False, methods=['post'], serializer_class=CaptainRegisterSerializer, url_path='register')
     def register(self, request, *args, **kwargs):
         try:
-            serializer = self.get_serializer(data=request.data)
+            serializer = CaptainRegisterSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(
@@ -283,9 +290,15 @@ class CaptainViewSet(ModelViewSet):
         except Exception as e:
             return exception_response(e)
 
-    @extend_schema(exclude=True)
+    @extend_schema(
+        summary="List Captain",
+        operation_id="list_captain",
+        description="List all captains ",
+        tags=["Captains"],
+    )
+    # @action(detail=True, methods=["get"], serializer_class=CaptainSerializer)
     def list(self, request, *args, **kwargs):
-        return method_not_allowed()
+        # return method_not_allowed()
         return super().list(request, *args, **kwargs)
     @extend_schema(exclude=True)
     def retrieve(self, request, *args, **kwargs):

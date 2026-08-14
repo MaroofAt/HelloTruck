@@ -30,6 +30,19 @@ class OrderViewSet (viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
 
+    def get_permissions(self):
+        if self.action == "list":
+            # return [IsAdmin , IsSubAdmin]
+            # self.permission_classes.pop(IsTrader)
+            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                self.permission_classes.append(IsSubAdmin) 
+            # self.permission_classes.append(IsAdmin) 
+
+        if self.action == "create_order" or self.action == "create_delivery_after_shipment" or self.action == "update_order" or self.action == 'cancel_order':
+            self.permission_classes.append(IsTrader)
+        return super().get_permissions()
+    
+
     @extend_schema(
         summary="Create Order",
         operation_id= "create_order",
@@ -335,6 +348,15 @@ class OrderViewSet (viewsets.ModelViewSet):
             
         order.delete()
         return Response({"detail": "Order has been canceled and deleted "}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="List Order",
+        operation_id="list_order",
+        description="List all orders ",
+        tags=["Order"],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
     
     
 

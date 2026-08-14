@@ -283,6 +283,15 @@ class ListCaptainTripsSerializer(serializers.ModelSerializer):
             'status':{"read_only":True},
         }
 
+class CaptainSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Captain
+        fields = [
+            'id',
+            'name',
+            'accommodation',
+            'permanent',
+        ]
 
 
 class Sub_AdminSerializer(serializers.ModelSerializer):
