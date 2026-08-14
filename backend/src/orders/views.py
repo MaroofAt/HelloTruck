@@ -359,7 +359,11 @@ class TripViewSet (viewsets.ModelViewSet):
                     if self.request.user.role != Credential.Role.SUB_ADMIN:
                         self.permission_classes.append(IsTrader)
                     else:
-                        self.permission_classes.append(IsSubAdmin) 
+                        self.permission_classes.append(IsSubAdmin)
+
+        if self.action == "load_trip_manually":
+            if self.request.user.is_authenticated and self.request.user.role != Credential.Role.ADMIN:
+                self.permission_classes.append(IsSubAdmin) 
 
 
 
@@ -532,22 +536,22 @@ class TripViewSet (viewsets.ModelViewSet):
 
 
     @extend_schema(
-            summary="Change Status to Complete",
-            operation_id= "change_status_to_complete",
-            description= "trader or sup_admin or admin want to change trip status ",
-            tags=["Trips"],
-            request={
-                'multipart/form-data':{
-                    'type': 'object',
-                    'properties': {
-                        "status": {'type':"string" ,
-                                'enum': ["complete" , "complete_with_damage"] ,
-                                "example": 'complete'
-                        },
-                    }
+        summary="Change Status to Complete",
+        operation_id= "change_status_to_complete",
+        description= "trader or sup_admin or admin want to change trip status ",
+        tags=["Trips"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties': {
+                    "status": {'type':"string" ,
+                            'enum': ["complete" , "complete_with_damage"] ,
+                            "example": 'complete'
+                    },
                 }
-            } 
-        )
+            }
+        } 
+    )
     @action(detail=True , methods=['patch'] , serializer_class = TripSerializer)
     def change_status_to_complete(self, request, *args, **kwargs):
         trip_id = kwargs.get("pk")
@@ -578,6 +582,33 @@ class TripViewSet (viewsets.ModelViewSet):
             'result': ""#result
             }, status=status.HTTP_400_BAD_REQUEST
         )
+# TODO///////////////////
+    @extend_schema(
+        summary="Load Trip Manually",
+        operation_id= "load_trip_manually",
+        description= "sup_admin or admin want to load the trip manually ",
+        tags=["Trips"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties': {
+                    "orders": {'type': 'array','items': {'type': 'integer'},'description': 'List of order IDs to assign to this trip'},
+                    "trip": {'type':'int' , 'example':1},
+                    'vehicle':{'type':'int' , 'example':1},
+                }
+            }
+        } 
+    )
+    @action(detail=False , methods=['post'] , serializer_class=TripSerializer)
+    def load_trip_manually(self,request , *args, **kwargs):
+        orders_ids = request.data.get("orders" , [])
+        if isinstance(orders_ids, str):
+            orders_ids = [int(id.strip()) for id in orders_ids.split(',')]
+        elif isinstance(orders_ids, list):
+            orders_ids = [int(id) for id in orders_ids]
+        # print(orders_ids[0])
+        
+        return Response({} , status.HTTP_200_OK)
 
 
 
