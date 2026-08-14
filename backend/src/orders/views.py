@@ -11,8 +11,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from users.models import Credential  
 
-from .models import Order , Order_Load , Trip 
-from .serializers import OrderSerializer , TripSerializer , LoadTripSerializer , AutoLoadTripSerializer
+from .models import Order , Order_Load , Trip , Special_Shipment
+from .serializers import OrderSerializer , TripSerializer , LoadTripSerializer , AutoLoadTripSerializer , SpecialShipmentSerializer
 
 from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 
@@ -875,5 +875,58 @@ class TripViewSet (viewsets.ModelViewSet):
         )
 
 
+class SpecialShipmentViewSet(viewsets.ModelViewSet):
+    queryset = Special_Shipment.objects.all()
+    serializer_class =  SpecialShipmentSerializer
+    permission_classes = [IsAdmin]
+
+
+    @extend_schema(
+        summary="Create Special Shipment",
+        operation_id= "create_special_shipment",
+        description= "admin want to create Special Shipment",
+        tags=["Special_Shipment"],
+        request={
+            'application/json':{
+                'type': 'object',
+                'properties' : {
+                    "title":{'type':'string' , 'example':'Caravan transport' },
+                    "price":{'type':'double' , 'example': 1500 },
+                }
+            }
+        }
+    )
+    # @action(detail=False , methods=["post"] , serializer_class = SpecialShipmentSerializer)
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update Special Shipment",
+        operation_id= "update_special_shipment",
+        description= "admin want to update Special Shipment",
+        tags=["Special_Shipment"],
+        request={
+            'application/json':{
+                'type': 'object',
+                'properties' : {
+                    "title":{'type':'string' , 'example':'Caravan transport' },
+                    "price":{'type':'double' , 'example': 1500 },
+                }
+            }
+        }
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    
+
+    @extend_schema(
+        summary="delete Special Shipment",
+        operation_id= "delete_special_shipment",
+        description= "admin want to delete Special Shipment",
+        tags=["Special_Shipment"],
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
 
 # Create your views here.

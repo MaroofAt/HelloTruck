@@ -621,3 +621,16 @@ class LoadTripSerializer(serializers.Serializer):
 class AutoLoadTripSerializer(serializers.Serializer):
     trip = serializers.IntegerField()
     vehicle = serializers.IntegerField()
+
+
+class SpecialShipmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Special_Shipment
+        fields = [
+            'id',
+            'title',
+            'price',
+        ]
+        extra_kwargs = {
+            'id':{"read_only": True},
+        }
