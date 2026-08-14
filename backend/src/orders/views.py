@@ -1,4 +1,6 @@
 from django.shortcuts import render
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -9,13 +11,13 @@ from rest_framework.permissions import IsAuthenticated
 from users.models import Credential  
 
 from .models import Order , Order_Load , Trip 
-from .serializers import OrderSerializer , TripSerializer
+from .serializers import OrderSerializer , TripSerializer , LoadTripSerializer
 
 from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 
 from dashboard.models import Location
 
-from users.models import Trader
+from users.models import Trader , Vehicle
 
 from drf_spectacular.utils import extend_schema
 
@@ -599,16 +601,94 @@ class TripViewSet (viewsets.ModelViewSet):
             }
         } 
     )
-    @action(detail=False , methods=['post'] , serializer_class=TripSerializer)
+    @action(detail=False , methods=['post'] , serializer_class=LoadTripSerializer)
     def load_trip_manually(self,request , *args, **kwargs):
-        orders_ids = request.data.get("orders" , [])
-        if isinstance(orders_ids, str):
-            orders_ids = [int(id.strip()) for id in orders_ids.split(',')]
-        elif isinstance(orders_ids, list):
-            orders_ids = [int(id) for id in orders_ids]
-        # print(orders_ids[0])
+        # orders_ids = request.data.get("orders" , [])
+        # if isinstance(orders_ids, str):
+        #     orders_ids = [int(id.strip()) for id in orders_ids.split(',')]
+        # elif isinstance(orders_ids, list):
+        #     orders_ids = [int(id) for id in orders_ids]
+        # # print(orders_ids[0])
         
-        return Response({} , status.HTTP_200_OK)
+        # return Response({} , status.HTTP_200_OK)
+        
+        # Validate input
+        input_serializer = self.serializer_class(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        order_ids = input_serializer.validated_data['orders']
+        trip_id = input_serializer.validated_data['trip']
+        vehicle_id = input_serializer.validated_data['vehicle']
+
+        # Fetch objects
+        trip = get_object_or_404(Trip, id=trip_id)
+        vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+
+        # Optional: trip should be pending
+        if trip.status != Trip.Status.PENDING:
+            return Response(
+                {"detail": "Trip must be in 'pending' state to load orders."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Fetch orders
+        orders = Order.objects.filter(id__in=order_ids)
+        if len(orders) != len(order_ids):
+            missing = set(order_ids) - set(orders.values_list('id', flat=True))
+            return Response(
+                {"detail": f"Orders not found: {list(missing)}"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Optional: check if any order is already loaded in another trip
+        already_loaded = Order_Load.objects.filter(order__in=orders).exists()
+        if already_loaded:
+            loaded_order_ids = Order_Load.objects.filter(order__in=orders).values_list('order_id', flat=True)
+            return Response(
+                {"detail": f"Orders already loaded in another trip: {list(loaded_order_ids)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check capacity
+        total_volume = 0
+        for order in orders:
+            if order.volume > vehicle.accepted_volume:
+                return Response(
+                    {"detail": f"Order {order.id} volume ({order.volume}) exceeds vehicle capacity ({vehicle.accepted_volume})."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            total_volume += order.volume
+
+        if total_volume > vehicle.accepted_volume:
+            return Response(
+                {"detail": f"Total volume ({total_volume}) exceeds vehicle capacity ({vehicle.accepted_volume})."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # If we had weight capacity, we'd check sum of weights here
+
+        # Create Order_Load records atomically
+        with transaction.atomic():
+            order_loads = []
+            for order in orders:
+                load_percent = (order.volume / vehicle.accepted_volume) * 100
+                order_load = Order_Load(
+                    order=order,
+                    trip=trip,
+                    vehicle=vehicle,
+                    load_percent=load_percent
+                )
+                order_loads.append(order_load)
+            Order_Load.objects.bulk_create(order_loads)
+
+        return Response(
+            {
+                "message": f"Successfully loaded {len(order_loads)} orders to trip {trip.id}.",
+                "loaded_orders": [order.id for order in orders],
+                "total_volume": total_volume,
+                "vehicle_capacity": vehicle.accepted_volume
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 

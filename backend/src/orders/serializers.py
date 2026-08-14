@@ -604,3 +604,14 @@ class TripSerializer (serializers.ModelSerializer):
         extra_kwargs = {
             'id': {"read_only": True},
         }
+
+
+
+class LoadTripSerializer(serializers.Serializer):
+    orders = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+        help_text="List of order IDs"
+    )
+    trip = serializers.IntegerField(help_text="Trip ID")
+    vehicle = serializers.IntegerField(help_text="Vehicle ID")
