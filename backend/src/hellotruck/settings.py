@@ -32,7 +32,14 @@ SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-lz$zc$1wz1!jk43z6yw$h8$i4pg
 DEBUG = os.getenv('DEBUG',True)
 
 ALLOWED_HOSTS = ['*']
-
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
