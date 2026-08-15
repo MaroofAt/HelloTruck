@@ -13,8 +13,8 @@ from datetime import timedelta
 from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 from tools.responses import method_not_allowed, exception_response
 
-from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle
-from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer
+from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle , Discount , Discount_Traders
+from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer , DiscountSerializer
 from .utils import send_otp_by_sms , send_otp_email_to_user
 
 # Create your views here.
@@ -631,3 +631,51 @@ class VehicleViewSet(ModelViewSet):
     @action(detail=False , methods=["GET"] , serializer_class = VehicleSerializer)
     def list_vehicle(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+
+class DiscountViewSet(ModelViewSet):
+    queryset = Discount.objects.all()
+    serializer_class = DiscountSerializer
+    permission_classes = [IsAdmin ]
+
+
+    @extend_schema(
+        summary="Create Discount",
+        operation_id= "create_discount",
+        description= "admin want to create Discount",
+        tags=["Discount"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties' : {
+                    "type":{'type':'string' ,'enum':['percent' , 'fixed' , 'full_free'] ,'example':'percent' },
+                    "validation_datetime":{
+                        "type": "string",
+                        'format': 'custom-datetime',
+                        'pattern': r'^\d{4}/\d{1,2}/\d{1,2} \d{1,2}:\d{2}$',
+                        "example":"2026-8-17 01:30"
+                     },
+                    "percent":{'type': "double" , 'example': "0.5" },
+                    "fixed ":{'type': 'double' ,'example':"150" },
+                }
+            }
+        }
+    )
+    def create(self, request, *args, **kwargs):
+        type = request.data.get('type')
+        fixed = request.data.get("fixed")
+        percent = request.data.get("percent")
+        print(fixed)
+        print("//////////////////////////////////////")
+        if type != "fixed" and fixed in [None , " "]:
+            return Response({
+                "detail":"you should change the type or make the fixed field null"},
+                status=status.HTTP_400_BAD_REQUEST)
+        if type == "full_free" and (fixed is not None or percent is not None):
+            return Response({
+                "detail":"its full free , you can't fill the percent or fixed field"}
+                ,status = status.HTTP_400_BAD_REQUEST
+            )
+        return super().create(request, *args, **kwargs)
+    
+

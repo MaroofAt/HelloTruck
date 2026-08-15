@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from tools.models import check_mobile_number, normalize_mobile_number
 
-from .models import Credential, Trader, Captain, Sub_Admin , Vehicle
+from .models import Credential, Trader, Captain, Sub_Admin , Vehicle , Discount , Discount_Traders
 from dashboard.models import Location
 from orders.models import Trip
 
@@ -414,3 +414,18 @@ class VehicleSerializer(serializers.ModelSerializer):
         # vehicle = Vehicle.objects.create(**validated_data)
         # return vehicle
         return instance
+
+
+class DiscountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Discount
+        fields = [
+            'id',
+            'type',
+            'validation_datetime',
+            'percent',
+            'fixed',
+        ]
+        extra_kwargs = {
+            'id':{"read_only":True},
+        }
