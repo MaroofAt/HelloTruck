@@ -26,6 +26,8 @@ class TraderViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action == "show_trader_discount":
             self.permission_classes = [IsTrader]
+        if self.action == "list":
+            self.permission_classes = [IsAdmin]
         return super().get_permissions()
     def get_queryset(self):
         return super().get_queryset()
@@ -83,9 +85,14 @@ class TraderViewSet(ModelViewSet):
         except Exception as e:
             return exception_response(e)
 
-    @extend_schema(exclude=True)
+    @extend_schema(
+        summary="List Trader",
+        operation_id="list_trader",
+        description="Admin Want to See trader",
+        tags=["Traders"],
+    )
     def list(self, request, *args, **kwargs):
-        return method_not_allowed()
+        # return method_not_allowed()
         return super().list(request, *args, **kwargs)
     @extend_schema(exclude=True)
     def retrieve(self, request, *args, **kwargs):
@@ -713,6 +720,11 @@ class DiscountViewSet(ModelViewSet):
                 "detail":"its full free , you can't fill the percent or fixed field"}
                 ,status = status.HTTP_400_BAD_REQUEST
             )
+        if fixed not in [None , " "] and percent not in [None , " "]:
+            return Response({
+                "detail":"you can't fill the percent and fixed field to gather"}
+                ,status = status.HTTP_400_BAD_REQUEST
+            )
         return super().create(request, *args, **kwargs)
 
 
@@ -817,12 +829,13 @@ class DiscountViewSet(ModelViewSet):
     
 
     @extend_schema(
-        summary="List Discount",
-        operation_id= "list_discount",
+        summary="List Trader Discount",
+        operation_id= "list_trader_discount",
         description= "admin want to List discount ",
         tags=["Discount"],
     )
-    def list(self, request, *args, **kwargs):
+    @action(detail=False , methods=["get"])
+    def list_trader_discount(self, request, *args, **kwargs):
         queryset = Discount_Traders.objects.all()
         serializer = ListDiscountSerializer(queryset , many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -840,7 +853,7 @@ class DiscountViewSet(ModelViewSet):
     @extend_schema(
         summary="Remove Discount on Trader",
         operation_id= "remove_discount_on_trader",
-        description= "admin want to List discount ",
+        description= "admin want to remove discount ",
         tags=["Discount"],
     )
     @action(detail=True , methods=['delete'] , serializer_class=ListDiscountSerializer)
@@ -854,3 +867,13 @@ class DiscountViewSet(ModelViewSet):
             } , status.HTTP_404_NOT_FOUND)
         discount_trader.delete()
         return Response(status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="List Discount",
+        operation_id= "list_discount",
+        description= "admin want to List discount ",
+        tags=["Discount"],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+    
