@@ -228,7 +228,7 @@ class OrderSerializer(serializers.ModelSerializer):
             discount_trader = discount_trader.first()
             discount = Discount.objects.filter(id = discount_trader.discount.id).first()
             if discount.validation_datetime <= timezone.now():
-                pass
+                discount.delete()
             else:    
                 if discount.type == 'full_free':
                     price = 0
