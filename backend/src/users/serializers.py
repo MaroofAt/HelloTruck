@@ -429,3 +429,12 @@ class DiscountSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'id':{"read_only":True},
         }
+
+
+class AddDiscountToTraderSerializer(serializers.Serializer):
+    trader = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+        help_text="List of trader IDs"
+    )
+    discount = serializers.IntegerField(help_text="Discount ID")
