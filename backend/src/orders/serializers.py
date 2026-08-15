@@ -2,9 +2,11 @@
 from rest_framework import serializers
 
 from .models import Order , Trip
-from users.models import Credential , Trader 
+from users.models import Credential , Trader , Discount_Traders , Discount
 from dashboard.models import Branch , Location 
 from .models import Special_Shipment
+
+from django.utils import timezone
 
 import math
 from decimal import Decimal, ROUND_HALF_UP
@@ -217,8 +219,27 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "you should revers the delivery flag or you'r entering the same from/to "
             })
+
         
+        trader = validated_data['trader']
+        discount_trader = Discount_Traders.objects.filter(trader=trader)
+        if discount_trader.exists():
             
+            discount_trader = discount_trader.first()
+            discount = Discount.objects.filter(id = discount_trader.discount.id).first()
+            if discount.validation_datetime <= timezone.now():
+                pass
+            else:    
+                if discount.type == 'full_free':
+                    price = 0
+                elif discount.type == "fixed":
+                    price = price-discount.fixed
+                    if price < 0:
+                        price = 0
+                elif discount.type == "percent":
+                    price = price * discount.percent
+            
+
         validated_data['price'] = price
         validated_data["distance"] = distance
         
@@ -354,7 +375,7 @@ class OrderSerializer(serializers.ModelSerializer):
         # location1 = Location.objects.filter(pk=branch1.id).first()
         # location2 = Location.objects.filter(pk = to.id).first()
         print("//////////////////////////////////////////////////////////////////////////////////")
-        print(site1.id)
+        # print(site1.id)
         lat1 = location1.latitude
         lon1 = location1.longitude
         lat2 = location2.latitude
@@ -587,6 +608,8 @@ class OrderSerializer(serializers.ModelSerializer):
         
         # Round to 2 decimal places
         total = Decimal(str(total)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        
         
         return float(total)
 
