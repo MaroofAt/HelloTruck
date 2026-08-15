@@ -14,7 +14,7 @@ from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain
 from tools.responses import method_not_allowed, exception_response
 
 from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle , Discount , Discount_Traders
-from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer , DiscountSerializer
+from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer , DiscountSerializer , AddDiscountToTraderSerializer
 from .utils import send_otp_by_sms , send_otp_email_to_user
 
 # Create your views here.
@@ -677,5 +677,102 @@ class DiscountViewSet(ModelViewSet):
                 ,status = status.HTTP_400_BAD_REQUEST
             )
         return super().create(request, *args, **kwargs)
-    
+
+
+    @extend_schema(
+        summary="Add Discount To Trader",
+        operation_id= "add_discount_to_trader",
+        description= "admin want to add discount to some trader",
+        tags=["Discount"],
+        request={
+            'multipart/form-data':{
+                'type': 'object',
+                'properties' : {
+                    "discount ":{'type': 'int' ,'example':1 },
+                    "trader": {'type': 'array','items': {'type': 'integer'}}
+                }
+            }
+        }
+    )
+    @action(detail=False , methods=['post'] , serializer_class=AddDiscountToTraderSerializer )
+    def add_discount_to_trader(self , request , *args, **kwargs):
+        # data = request.data.copy()
+        data = dict(request.data.lists())
+        print(data['trader'])
+        if 'discount' in data and isinstance(data['discount'], list):
+            data['discount'] = data['discount'][0] if data['discount'] else None
+        # print(request.data)
+        # print(f"Type of data['trader']: {type(data['trader'])}")
+        # print(f"Value: {data['trader']}")
+        # Convert dict like {"0": "1", "1": "2"} to list [1, 2]
+        # if 'trader' in data and isinstance(data['trader'], dict):
+        #     data['trader'] = [int(v) for v in data['trader'].values() if v]
+        trader_ids = data.get('trader')
+        if trader_ids is not None:
+            # print("////////////////////////////")
+            data['trader'] = self._parse_discount_trader_list(trader_ids)
+        print(data)
+        serializer = AddDiscountToTraderSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        # print("///////////////////////////////////////////////")
+
+        discount_id = serializer.validated_data['discount']
+        trader_ids = serializer.validated_data['trader']
+        print(trader_ids)
+        
+        try:
+            discount = Discount.objects.get(id=discount_id)
+        except Discount.DoesNotExist:
+            return Response({"detail": "Discount not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Get valid traders only (ignore invalid IDs or raise error)
+        traders = Trader.objects.filter(id__in=trader_ids)
+        found_ids = set(traders.values_list('id', flat=True))
+        missing = set(trader_ids) - found_ids
+
+        if missing:
+            return Response(
+                {"detail": f"Traders with IDs {list(missing)} not found"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Add the discount to each trader (assumes ManyToMany field)
+        for trader in traders:
+            trader.discounts.add(discount)  # change `discounts` to your actual related_name
+
+        return Response(
+            {"detail": f"Discount added to {len(traders)} trader(s)"},
+            status=status.HTTP_200_OK
+        )        
+
+    def _parse_discount_trader_list(self, value):
+        """Convert various input formats to a list of integers."""
+        if isinstance(value, list):
+            result = []
+            for item in value:
+                if isinstance(item, str) and ',' in item:
+                    # Split comma-separated string (e.g., "2,3,1")
+                    result.extend(int(x.strip()) for x in item.split(',') if x.strip())
+                else:
+                    result.append(int(item))
+            return result
+
+        elif isinstance(value, dict):
+            # Handles "orders[0]=1&orders[1]=2"
+            return [int(v) for v in value.values()]
+
+        elif isinstance(value, str):
+            # print("////////////////////////////")
+
+            value = value.strip()
+            if not value:
+                return []
+            if ',' in value:
+                return [int(x.strip()) for x in value.split(',') if x.strip()]
+            else:
+                return [int(value)]
+
+        else:
+            # Fallback: let the serializer handle invalid types
+            return []
 
