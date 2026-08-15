@@ -17,12 +17,15 @@ from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle 
 from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer , DiscountSerializer , AddDiscountToTraderSerializer ,ListDiscountSerializer
 from .utils import send_otp_by_sms , send_otp_email_to_user
 
+
 # Create your views here.
 class TraderViewSet(ModelViewSet):
     queryset = Trader.objects.all()
     serializer_class = TraderRegisterSerializer #TODO change to Trader Serializer later
 
     def get_permissions(self):
+        if self.action == "show_trader_discount":
+            self.permission_classes = [IsTrader]
         return super().get_permissions()
     def get_queryset(self):
         return super().get_queryset()
@@ -215,6 +218,40 @@ class TraderViewSet(ModelViewSet):
             )
         except Exception as e:
             return exception_response(e)
+        
+    @extend_schema(
+        summary="Show Trader Discount",
+        operation_id="show_trader_discount",
+        description="Trader Want to See his Discount",
+        tags=["Traders"],
+    )
+    @action(detail=False , methods=["GET"] )
+    def show_trader_discount(self, request, *args, **kwargs):
+        credential = Credential.objects.filter(id=request.user.id).first()
+        trader = Trader.objects.filter(credentials=credential.id).first()
+        discount_traders = Discount_Traders.objects.filter(trader=trader.id)
+
+        if not discount_traders.exists():
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        discount_ids = discount_traders.values_list('discount_id', flat=True)
+        discounts = Discount.objects.filter(id__in=discount_ids)
+
+        serializer = DiscountSerializer(discounts, many=True)
+        return Response({
+            "detail": "Congratulations! You have discounts.",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+        # if discount_trader.exists():
+        #     # discount_trader = discount_trader.first()
+        #     discount = Discount.objects.filter(id=discount_trader.discount.id)
+        #     return Response({
+        #         "detail": "Congratulations You Have Discount",
+        #         "data": discount,
+        #     } , status.HTTP_200_OK)
+        # return Response(status.HTTP_204_NO_CONTENT)
+
     
 class CaptainViewSet(ModelViewSet):
     queryset = Captain.objects.all()
@@ -790,3 +827,30 @@ class DiscountViewSet(ModelViewSet):
         serializer = ListDiscountSerializer(queryset , many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
         # return super().list(request, *args, **kwargs)
+    
+    @extend_schema(
+        summary="Delete Discount",
+        operation_id= "delete_discount",
+        description= "admin want to Delete discount ",
+        tags=["Discount"],
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Remove Discount on Trader",
+        operation_id= "remove_discount_on_trader",
+        description= "admin want to List discount ",
+        tags=["Discount"],
+    )
+    @action(detail=True , methods=['delete'] , serializer_class=ListDiscountSerializer)
+    def remove_discount_on_trader(self, request, *args, **kwargs):
+        pk = kwargs.get("pk")
+        print(pk)
+        discount_trader = Discount_Traders.objects.filter(pk=pk)
+        if not discount_trader.exists():
+            return Response({
+                "detail": "The Trader Does't have Discount",
+            } , status.HTTP_404_NOT_FOUND)
+        discount_trader.delete()
+        return Response(status=status.HTTP_200_OK)

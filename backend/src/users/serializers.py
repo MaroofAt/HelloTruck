@@ -449,7 +449,6 @@ class ListDiscountSerializer(serializers.ModelSerializer):
                 "name",
                 'ecommerce',
             ]
-            
     discount = DiscountSerializer(read_only = True)
     trader = TraderSerializer(read_only = True)
     class Meta:
