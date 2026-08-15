@@ -14,7 +14,7 @@ from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain
 from tools.responses import method_not_allowed, exception_response
 
 from .models import Credential, Trader, Captain, Sub_Admin , User_OTP , Vehicle , Discount , Discount_Traders
-from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer , DiscountSerializer , AddDiscountToTraderSerializer
+from .serializers import TraderRegisterSerializer, CaptainRegisterSerializer, Sub_AdminSerializer , VehicleSerializer ,ListCaptainTripsSerializer , CaptainSerializer , DiscountSerializer , AddDiscountToTraderSerializer ,ListDiscountSerializer
 from .utils import send_otp_by_sms , send_otp_email_to_user
 
 # Create your views here.
@@ -776,3 +776,17 @@ class DiscountViewSet(ModelViewSet):
             # Fallback: let the serializer handle invalid types
             return []
 
+
+    
+
+    @extend_schema(
+        summary="List Discount",
+        operation_id= "list_discount",
+        description= "admin want to List discount ",
+        tags=["Discount"],
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = Discount_Traders.objects.all()
+        serializer = ListDiscountSerializer(queryset , many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        # return super().list(request, *args, **kwargs)

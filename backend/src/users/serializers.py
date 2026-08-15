@@ -438,3 +438,24 @@ class AddDiscountToTraderSerializer(serializers.Serializer):
         help_text="List of trader IDs"
     )
     discount = serializers.IntegerField(help_text="Discount ID")
+
+
+class ListDiscountSerializer(serializers.ModelSerializer):
+    class TraderSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Trader
+            fields = [
+                "id",
+                "name",
+                'ecommerce',
+            ]
+            
+    discount = DiscountSerializer(read_only = True)
+    trader = TraderSerializer(read_only = True)
+    class Meta:
+        model = Discount_Traders
+        fields = [
+            'id',
+            'discount',
+            'trader',
+        ]
