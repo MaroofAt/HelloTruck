@@ -589,7 +589,32 @@ class OrderSerializer(serializers.ModelSerializer):
         total = Decimal(str(total)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
         return float(total)
-    
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ['id' , 'latitude' , 'longitude']
+class ListTraderOrder(serializers.ModelSerializer):
+    from_location = LocationSerializer(read_only=True)
+    to_location = LocationSerializer(read_only=True)
+    class Meta:
+        model = Order
+        fields = [
+            'id',
+            'volume',
+            'weight', 
+            'goods_type',
+            'price',
+            'distance',
+            'delivery',
+            'shipment_type',
+            'trader',
+            'from_branch',
+            'to_branch',
+            'from_location',
+            'to_location',
+            'special_shipment',
+        ]
 
 class TripSerializer (serializers.ModelSerializer):
     
