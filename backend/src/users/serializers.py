@@ -14,6 +14,7 @@ class TraderRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trader
         fields = [
+            'id',
             'email',
             'mobile_number',
             'password',
@@ -21,6 +22,7 @@ class TraderRegisterSerializer(serializers.ModelSerializer):
             'name'
         ]
         extra_kwargs = {
+            'id':{'read_only':True},
             'email': {'write_only':True, 'required':False, 'allow_null':True},
             'mobile_number': {'write_only':True, 'required':False, 'allow_null':True},
             'name': {'required':True, 'allow_null':False}
