@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from users.models import Credential  
 
 from .models import Order , Order_Load , Trip , Special_Shipment
-from .serializers import OrderSerializer , TripSerializer , LoadTripSerializer , AutoLoadTripSerializer , SpecialShipmentSerializer
+from .serializers import OrderSerializer , TripSerializer , LoadTripSerializer , AutoLoadTripSerializer , SpecialShipmentSerializer , ListTraderOrder
 
 from tools.permissions import IsTrader , IsAdmin , IsSubAdmin , IsCaptain 
 
@@ -48,7 +48,7 @@ class OrderViewSet (viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             self.permission_classes = [IsAdmin | IsSubAdmin]
         elif self.action in ['create', 'partial_update', 'update', 'destroy',
-                             'cancel_order', 'create_delivery_after_shipment']:
+                             'cancel_order', 'create_delivery_after_shipment' , 'list_trader_order']:
             self.permission_classes = [IsTrader]
         else:
             self.permission_classes = [IsAuthenticated]
@@ -380,9 +380,21 @@ class OrderViewSet (viewsets.ModelViewSet):
                 "detail": "you don't have the permission "
             } , status.HTTP_403_FORBIDDEN)
         return super().list(request, *args, **kwargs)
-    
-    
 
+    
+    @extend_schema(
+        summary="List Trader Order",
+        operation_id="list_trader_order",
+        description="List order for specific trader",
+        tags=["Order"],
+    )
+    @action(detail=False , methods=['GET'] , serializer_class=ListTraderOrder)
+    def list_trader_order(self , request, *args, **kwargs):
+        credential = request.user.id
+        trader = Trader.objects.filter(credentials = credential).first() 
+        orders = Order.objects.filter(trader=trader.id)
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
     
         
 class TripViewSet (viewsets.ModelViewSet):
@@ -901,8 +913,13 @@ class TripViewSet (viewsets.ModelViewSet):
 class SpecialShipmentViewSet(viewsets.ModelViewSet):
     queryset = Special_Shipment.objects.all()
     serializer_class =  SpecialShipmentSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdmin | IsTrader]
 
+    def get_permissions(self):
+        # if self.action == "list":
+        #     self.permission_classes.append(IsTrader)
+        #     # self.permission_classes.append(IsSubAdmin)
+        return super().get_permissions()
 
     @extend_schema(
         summary="Create Special Shipment",
@@ -921,6 +938,11 @@ class SpecialShipmentViewSet(viewsets.ModelViewSet):
     )
     # @action(detail=False , methods=["post"] , serializer_class = SpecialShipmentSerializer)
     def create(self, request, *args, **kwargs):
+        if request.user.role == Credential.Role.TRADER:
+            return Response(
+                {"detail":"you don't have the permission"},
+                status=status.HTTP_403_FORBIDDEN
+            )
         return super().create(request, *args, **kwargs)
 
     @extend_schema(
@@ -939,6 +961,11 @@ class SpecialShipmentViewSet(viewsets.ModelViewSet):
         }
     )
     def partial_update(self, request, *args, **kwargs):
+        if request.user.role == Credential.Role.TRADER:
+            return Response(
+                {"detail":"you don't have the permission"},
+                status=status.HTTP_403_FORBIDDEN
+            )
         return super().partial_update(request, *args, **kwargs)
 
     
@@ -950,6 +977,20 @@ class SpecialShipmentViewSet(viewsets.ModelViewSet):
         tags=["Special_Shipment"],
     )
     def destroy(self, request, *args, **kwargs):
+        if request.user.role == Credential.Role.TRADER:
+            return Response(
+                {"detail":"you don't have the permission"},
+                status=status.HTTP_403_FORBIDDEN
+            )
         return super().destroy(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="List Special Shipment",
+        operation_id= "list_special_shipment",
+        description= "admin or trader or sub_admin want to List Special Shipment",
+        tags=["Special_Shipment"],
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 # Create your views here.
