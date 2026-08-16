@@ -5,6 +5,7 @@ from tools.models import check_mobile_number, normalize_mobile_number
 
 from .models import Credential, Trader, Captain, Sub_Admin , Vehicle
 from dashboard.models import Location
+from orders.models import Trip
 
 class TraderRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True,required=True,style={'input_type': 'password'})
@@ -374,3 +375,74 @@ class VehicleSerializer(serializers.ModelSerializer):
 
             vehicle = Vehicle.objects.create(**validated_data)
             return vehicle
+
+
+class CaptainTripListSerializer(serializers.ModelSerializer):
+    vehicle_ids = serializers.SerializerMethodField()
+    load_count = serializers.SerializerMethodField()
+    total_weight = serializers.SerializerMethodField()
+    total_volume = serializers.SerializerMethodField()
+    origin_location_ids = serializers.SerializerMethodField()
+    destination_location_ids = serializers.SerializerMethodField()
+    origin_branch_ids = serializers.SerializerMethodField()
+    destination_branch_ids = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Trip
+        fields = [
+            'id',
+            'status',
+            'launch_datetime',
+            'arrival_datetime',
+            'vehicle_ids',
+            'load_count',
+            'total_weight',
+            'total_volume',
+            'origin_location_ids',
+            'destination_location_ids',
+            'origin_branch_ids',
+            'destination_branch_ids',
+        ]
+
+    def _loads(self, trip):
+        return trip.captain_order_loads
+
+    def get_vehicle_ids(self, trip):
+        return sorted({load.vehicle_id for load in self._loads(trip)})
+
+    def get_load_count(self, trip):
+        return len(self._loads(trip))
+
+    def get_total_weight(self, trip):
+        return sum(load.order.weight for load in self._loads(trip))
+
+    def get_total_volume(self, trip):
+        return sum(load.order.volume for load in self._loads(trip))
+
+    def get_origin_location_ids(self, trip):
+        return sorted({
+            load.order.from_location_id
+            for load in self._loads(trip)
+            if load.order.from_location_id is not None
+        })
+
+    def get_destination_location_ids(self, trip):
+        return sorted({
+            load.order.to_location_id
+            for load in self._loads(trip)
+            if load.order.to_location_id is not None
+        })
+
+    def get_origin_branch_ids(self, trip):
+        return sorted({
+            load.order.from_branch_id
+            for load in self._loads(trip)
+            if load.order.from_branch_id is not None
+        })
+
+    def get_destination_branch_ids(self, trip):
+        return sorted({
+            load.order.to_branch_id
+            for load in self._loads(trip)
+            if load.order.to_branch_id is not None
+        })

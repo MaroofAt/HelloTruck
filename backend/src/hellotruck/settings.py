@@ -31,6 +31,13 @@ SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-lz$zc$1wz1!jk43z6yw$h8$i4pg
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG',True)
 
+# Local Captain OTP testing only. It can never bypass SMS while DEBUG is off.
+CAPTAIN_OTP_SMS_BYPASS = (
+    str(DEBUG).lower() in {'1', 'true', 'yes', 'on'}
+    and os.getenv('CAPTAIN_OTP_SMS_BYPASS', 'true').lower()
+    in {'1', 'true', 'yes', 'on'}
+)
+
 ALLOWED_HOSTS = ['*']
 
 

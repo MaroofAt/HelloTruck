@@ -343,11 +343,23 @@ class Vehicle(TimeStampedModel):
 
 
 def otp_expires_date_time():
-    return timezone.now() + timezone.timedelta(minutes=10)
+    return timezone.now() + timezone.timedelta(minutes=5)
 class User_OTP (TimeStampedModel):
     class Meta:
         db_table = 'user_otp'
     otp = models.CharField(max_length=6, null=True, blank=True)
+    mobile_number = models.CharField(
+        max_length=25,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+    purpose = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
     expires_at = models.DateTimeField(default=otp_expires_date_time , editable=False)
     captain = models.ForeignKey(
         Captain,

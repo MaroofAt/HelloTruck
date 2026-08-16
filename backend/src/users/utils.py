@@ -37,24 +37,35 @@ def send_otp_email_to_user(email):
     send_mail(subject, message,email_from, recipient_list , fail_silently=False)
 
 
-def send_otp_by_sms(phone_number):
+def send_otp_by_sms(phone_number, purpose=None):
     """Send OTP via SMS"""
     gotp = generate_otp()
 
     otp_table = User_OTP.objects.create(
-        otp = gotp
+        otp=gotp,
+        mobile_number=phone_number,
+        purpose=purpose,
     )
-    otp_table.save()
 
-    message = f'Your OTP for verification is: {otp_table}. Valid for 5 minutes.'
-    
-    sms_service = SMSService()
-    result = SMSService.send_sms(sms_service ,to_number=phone_number , message=message)
-    
-    if result['success']:
-        return True, result
-    else:
+    message = f'Your OTP for verification is: {gotp}. Valid for 5 minutes.'
+
+    if (
+        purpose == 'captain_registration'
+        and settings.CAPTAIN_OTP_SMS_BYPASS
+    ):
+        return True, {'success': True, 'bypassed': True}
+
+    try:
+        sms_service = SMSService()
+        result = sms_service.send_sms(to_number=phone_number, message=message)
+    except Exception as error:
+        otp_table.delete()
+        return False, {'error': str(error)}
+
+    if not result.get('success'):
+        otp_table.delete()
         return False, result
+    return True, result
     
 
 def send_otp_by_whatsapp(phone_number, otp):
