@@ -312,13 +312,26 @@ def vehicle_image_upload_path(instance , filename):
 class Vehicle(TimeStampedModel):
 
     class Type(models.TextChoices):
-        A="a"
-        # TODOOOOOO
+        # Motor (delivery)
+        MOTOR="motor"
+        # Van (delivery / shipping)
+        VAN="van"
+        # Car (delivery / shipping)
+        CAR="car"
+        # Refrigerated_Truck (shipping)
+        REFRIGERATED_TRUCK="refrigerated_truck"
+        # Light_Truck (0.5 -> 7.5 tons) (shipping)
+        LIGHT_TRUCK="light_truck"
+        # Medium_Truck (7.5 -> 12 tons) (shipping)
+        MEDIUM_TRUCK="medium_truck"
+        # Heavy_Truck (12 -> 40 tons) (shipping)
+        HEAVY_TRUCK="heavy_truck"
+        
     
     type = models.CharField(
         max_length=100,
         choices=Type.choices,
-        default=Type.A,
+        default=Type.LIGHT_TRUCK,
         null=False,
         blank=False
     )
@@ -326,13 +339,14 @@ class Vehicle(TimeStampedModel):
     fuel_consumption_per_1km = models.FloatField(null=False, blank=False)
     
     class FuelType(models.TextChoices):
-        A='a'
-        # TODOOOOOOOO  'gasoline' , 'diesel'
+        GASOLINE = "gasoline"
+        DIESEL='diesel'
+
     
     fuel_type  = models.CharField(
         max_length=100,
         choices=FuelType.choices,
-        default=FuelType.A,
+        default=FuelType.GASOLINE,
         null=False,
         blank=False
     )
