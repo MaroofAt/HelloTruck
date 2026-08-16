@@ -556,32 +556,43 @@ class TripViewSet (viewsets.ModelViewSet):
     )
     @action(detail=False , methods=["post"] , serializer_class=TripSerializer )
     def create_EUV_trip(self, request, *args, **kwargs):
-        if not request.date.get("vehicle_id"):
+        if not request.data.get("vehicle_id"):
             return Response({'detail':'vehicle_id is requierd'} , status = status.HTTP_400_BAD_REQUEST)
 
-        if not request.date.get("order_id"):
+        if not request.data.get("order_id"):
             return Response({'detail':'order_id is requierd'} , status = status.HTTP_400_BAD_REQUEST)
         
         new_data = {
-            "launch_datetime": request.date.get("launch_datetime"),
-            "arrival_datetime": request.date.get("arrival_datetime"),
+            "launch_datetime": request.data.get("launch_datetime"),
+            "arrival_datetime": request.data.get("arrival_datetime"),
             "status":"pending",
         } 
         serializer = TripSerializer(data = new_data)
 
         if serializer.is_valid():
-            serializer.save()
-            order_load = Order_Load.objects.create({
-                "trip": request.data.get("id"),
-                "order": request.data.get("order"),
-                "vehicle": request.data.get("vehicle"),
-                "load_percent": 100,
-            })
+            trip = serializer.save()
+            order_load = Order_Load.objects.create(
+                trip= trip,
+                order_id = request.data.get("order_id"),
+                vehicle_id= request.data.get("vehicle_id"),
+                load_percent= 100,
+            )
             order_load.save()
+            # out_data = {
+            #     serializer.data,
+            #     order_load
+            # }
             out_data = {
-                serializer.data,
-                order_load
+                "trip": serializer.data,
+                "order_load": {
+                    "id": order_load.id,
+                    "trip": order_load.trip_id,
+                    "order": order_load.order_id,
+                    "vehicle": order_load.vehicle_id,
+                    "load_percent": order_load.load_percent,
+                }
             }
+
             if order_load:
                 return Response({"data":out_data}, status.HTTP_201_CREATED)
             
