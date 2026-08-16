@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv('SECRET_KEY','django-insecure-lz$zc$1wz1!jk43z6yw$h8$i4pg
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG',True)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*' , "https://setsuko-unhumbled-pseudoaesthetically.ngrok-free.dev" , "localhost" , '127.0.0.1']
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
