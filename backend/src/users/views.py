@@ -605,10 +605,10 @@ class VehicleViewSet(ModelViewSet):
             'application/json':{
                 'type': 'object',
                 'properties' : {
-                    "type":{'type':'string' , 'example':'a' },
+                    "type":{'type':'string' , 'example':'light_truck' },
                     "accepted_volume":{'type':'double' , 'example': 1.5 },
                     "fuel_consumption_per_1km":{'type': "double" , 'example': "0.5" },
-                    "fuel_type ":{'type': 'string' ,'example':"a" },
+                    "fuel_type ":{'type': 'string' ,'example':"gasoline" },
                     "verified":{'type': 'boolean', 'example':True },
                     "delivery":{'type': 'boolean', 'example':False },
                     "captain":{'type': 'integer' , 'example': '1' },
@@ -631,10 +631,10 @@ class VehicleViewSet(ModelViewSet):
             'application/json':{
                 'type': 'object',
                 'properties' : {
-                    "type":{'type':'string' , 'example':'a' },
+                    "type":{'type':'string' , 'example':'light_truck' },
                     "accepted_volume":{'type':'double' , 'example': 1.5 },
                     "fuel_consumption_per_1km":{'type': "double" , 'example': "0.5" },
-                    "fuel_type ":{'type': 'string' ,'example':"a" },
+                    "fuel_type ":{'type': 'string' ,'example':"gasoline" },
                     "verified":{'type': 'boolean', 'example':True },
                     "delivery":{'type': 'boolean', 'example':False },
                     'image': {'type': 'string' , 'format': 'binary'}
