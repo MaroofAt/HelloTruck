@@ -399,8 +399,8 @@ class VehicleSerializer(serializers.ModelSerializer):
         } 
 
     def create(self, validated_data):
-        validated_data["type"] = 'a'
-        validated_data["fuel_type"] = 'a'
+        # validated_data["type"] = 'a'
+        # validated_data["fuel_type"] = 'a'
 
         captain = validated_data["captain"]
         captain = Captain.objects.filter(id=captain.id)
