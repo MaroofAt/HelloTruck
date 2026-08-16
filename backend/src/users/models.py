@@ -326,6 +326,7 @@ class Vehicle(TimeStampedModel):
         MEDIUM_TRUCK="medium_truck"
         # Heavy_Truck (12 -> 40 tons) (shipping)
         HEAVY_TRUCK="heavy_truck"
+        
     
     type = models.CharField(
         max_length=100,
@@ -340,6 +341,7 @@ class Vehicle(TimeStampedModel):
     class FuelType(models.TextChoices):
         GASOLINE = "gasoline"
         DIESEL='diesel'
+
     
     fuel_type  = models.CharField(
         max_length=100,
