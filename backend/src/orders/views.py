@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
+from django.utils import timezone
+from datetime import timedelta
 
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -45,7 +47,7 @@ class OrderViewSet (viewsets.ModelViewSet):
     #     return super().get_permissions()
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'list_processed_orders_last_week']:
             self.permission_classes = [IsAdmin | IsSubAdmin]
         elif self.action in ['create', 'partial_update', 'update', 'destroy',
                              'cancel_order', 'create_delivery_after_shipment' , 'list_trader_order']:
@@ -53,6 +55,15 @@ class OrderViewSet (viewsets.ModelViewSet):
         else:
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action == 'list_processed_orders_last_week':
+            now = timezone.now()
+            start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_of_week = start_of_today - timedelta(days=7)
+            end_of_today = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+            qs = qs.filter(updated_at__range=(start_of_week, end_of_today))
+        return qs
 
     
 
@@ -395,7 +406,42 @@ class OrderViewSet (viewsets.ModelViewSet):
         orders = Order.objects.filter(trader=trader.id)
         serializer = self.get_serializer(orders, many=True)
         return Response(serializer.data)
-    
+
+
+    @extend_schema(
+            summary="List Processed Orders Last Week",
+            operation_id="list_processed_orders_last_week",
+            description="List processed orders from the last week",
+            tags=["Order"],
+        )
+    @action(detail=False , methods=['GET'])
+    def list_processed_orders_last_week(self, request, *args, **kwargs):
+        result = {}
+        
+        now = timezone.now()
+        start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_of_week = start_of_today - timedelta(days=7)
+        # end_of_today = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        result[timezone.localdate(start_of_week).strftime("%A")] = 0
+        for i in range(6):
+            start_of_week += timedelta(days=1)
+            result[timezone.localdate(start_of_week).strftime("%A")] = 0
+
+
+        def get_day_name(order:Order):
+            local_date = timezone.localdate(order.updated_at)
+            return local_date.strftime("%A")
+
+        qs = self.get_queryset()
+        for order in qs:
+            day_name = get_day_name(order)
+            if day_name in result:
+                result[day_name] += 1
+            else:
+                result[day_name] = 1
+
+        return Response(result, status=status.HTTP_200_OK)
+        
         
 class TripViewSet (viewsets.ModelViewSet):
 
