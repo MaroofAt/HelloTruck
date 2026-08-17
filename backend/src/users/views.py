@@ -695,6 +695,10 @@ class DiscountViewSet(ModelViewSet):
     serializer_class = DiscountSerializer
     permission_classes = [IsAdmin ]
 
+    def get_permissions(self):
+        if self.action == "list_trader_discount":
+            self.permission_classes = [IsTrader]
+        return super().get_permissions()
 
     @extend_schema(
         summary="Create Discount",
