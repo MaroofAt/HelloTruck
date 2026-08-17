@@ -266,6 +266,8 @@ class CaptainViewSet(ModelViewSet):
     # serializer_class = CaptainRegisterSerializer #TODO change to Captain Serializer later
 
     def get_permissions(self):
+        if self.action == "register":
+            self.permission_classes = [AllowAny]
         if self.action == "list_captain_trips":
             self.permission_classes.append(IsCaptain)
         if self.action == "list_captain":
